@@ -21,6 +21,13 @@
       "fail": 4,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-24T23:00:43.723Z",
+      "ok": 402,
+      "fail": 8,
+      "hashes": 5,
+      "stopReason": "budget"
     }
   ],
   "experiments": {
@@ -53,6 +60,16 @@
               "n": 30,
               "posMin": 9552,
               "posMax": 9997
+            }
+          }
+        },
+        {
+          "total": 16,
+          "buckets": {
+            "1": {
+              "n": 16,
+              "posMin": 9501,
+              "posMax": 9977
             }
           }
         }
@@ -91,6 +108,16 @@
               "posMax": 496
             }
           }
+        },
+        {
+          "total": 16,
+          "buckets": {
+            "1": {
+              "n": 16,
+              "posMin": 11,
+              "posMax": 458
+            }
+          }
         }
       ],
       "announced": {},
@@ -125,6 +152,16 @@
               "n": 496,
               "posMin": 7,
               "posMax": 9983
+            }
+          }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 20,
+              "posMax": 9997
             }
           }
         }
@@ -165,6 +202,16 @@
               "posMax": 9985
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "11": {
+              "n": 402,
+              "posMin": 11,
+              "posMax": 9824
+            }
+          }
         }
       ],
       "announced": {
@@ -203,6 +250,16 @@
               "posMax": 9989
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 8,
+              "posMax": 9984
+            }
+          }
         }
       ],
       "announced": {
@@ -212,5 +269,5 @@
     }
   },
   "lastChanges": [],
-  "scrapedAt": "2026-10-24T21:30:55.873Z"
+  "scrapedAt": "2026-10-24T23:00:43.928Z"
 }

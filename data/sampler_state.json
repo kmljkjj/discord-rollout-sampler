@@ -14,6 +14,13 @@
       "fail": 8,
       "hashes": 5,
       "stopReason": "budget"
+    },
+    {
+      "ts": "2026-10-24T21:30:55.451Z",
+      "ok": 496,
+      "fail": 4,
+      "hashes": 5,
+      "stopReason": null
     }
   ],
   "experiments": {
@@ -36,6 +43,16 @@
               "n": 27,
               "posMin": 9513,
               "posMax": 9999
+            }
+          }
+        },
+        {
+          "total": 30,
+          "buckets": {
+            "1": {
+              "n": 30,
+              "posMin": 9552,
+              "posMax": 9997
             }
           }
         }
@@ -64,6 +81,16 @@
               "posMax": 467
             }
           }
+        },
+        {
+          "total": 27,
+          "buckets": {
+            "1": {
+              "n": 27,
+              "posMin": 8,
+              "posMax": 496
+            }
+          }
         }
       ],
       "announced": {},
@@ -88,6 +115,16 @@
               "n": 407,
               "posMin": 56,
               "posMax": 9999
+            }
+          }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 7,
+              "posMax": 9983
             }
           }
         }
@@ -118,6 +155,16 @@
               "posMax": 9992
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "11": {
+              "n": 496,
+              "posMin": 0,
+              "posMax": 9985
+            }
+          }
         }
       ],
       "announced": {
@@ -146,6 +193,16 @@
               "posMax": 9988
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 1,
+              "posMax": 9989
+            }
+          }
         }
       ],
       "announced": {
@@ -154,49 +211,6 @@
       "missed": 0
     }
   },
-  "lastChanges": [
-    {
-      "name": "hash:2180379513",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 1,
-          "label": "Variant 1",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.3
-        }
-      ]
-    },
-    {
-      "name": "hash:3013881204",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 11,
-          "label": "Variant 11",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.3
-        }
-      ]
-    },
-    {
-      "name": "hash:4055210228",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 1,
-          "label": "Variant 1",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.3
-        }
-      ]
-    }
-  ],
-  "scrapedAt": "2026-10-24T20:57:34.407Z"
+  "lastChanges": [],
+  "scrapedAt": "2026-10-24T21:30:55.873Z"
 }

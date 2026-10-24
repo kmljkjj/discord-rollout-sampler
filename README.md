@@ -35,7 +35,7 @@ Aucun token Discord n'est nécessaire (le sampling est anonyme).
 
 En mode LAB (`SAMPLER_LAB=1`, défaut), chaque run envoie un rapport au webhook — idéal pour valider le système. Passer à `0` pour ne notifier que les changements réels.
 
-Le workflow `sampler.yml` utilise des valeurs ajustées après le premier run réel : `SAMPLER_TARGET=500`, `SAMPLER_CONCURRENCY=4`, `SAMPLER_MAX_MS=420000` (7 min), `SAMPLER_WINDOW_RUNS=4` → ~2 000 échantillons par fenêtre (~2 h de mesures), marge ±2 points au pire à 50 %, nettement moins à faible % .
+Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs réels : `SAMPLER_TARGET=500`, `SAMPLER_CONCURRENCY=4`, `SAMPLER_MAX_MS=420000` (7 min), `SAMPLER_WINDOW_RUNS=12` (6 h de mesures), `SAMPLER_MIN_N=250`. Fenêtre large nécessaire pour les rollouts partiels : une expérience à 5 % ne récolte que ~25 échantillons par run — il faut plusieurs heures de mesures pour publier son % (au seuil : ~300 échantillons, marge Wilson ±2,4 points).
 
 ## Env
 

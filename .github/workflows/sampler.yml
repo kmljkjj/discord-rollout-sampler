@@ -31,7 +31,8 @@ jobs:
           SAMPLER_TARGET: '500'
           SAMPLER_CONCURRENCY: '4'
           SAMPLER_MAX_MS: '420000'
-          SAMPLER_WINDOW_RUNS: '4'
+          SAMPLER_WINDOW_RUNS: '12'
+          SAMPLER_MIN_N: '250'
         run: node src/sampler.js
       - name: Commit l'état
         run: |

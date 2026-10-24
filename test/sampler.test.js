@@ -165,3 +165,15 @@ test('postWebhook : erreur réseau → ok=false', async () => {
   assert.equal(r.status, 0);
   assert.equal(r.text, 'boom');
 });
+
+test('labReportEmbed : liste les expériences mesurées avec nom et %', () => {
+  const e = sampler.labReportEmbed({
+    ok: 496, fail: 4, hashes: 5, measured: 5, changes: 0, elapsed: 420, stopReason: null, isFirst: false,
+    experiments: [
+      { name: '2023-09_iar_user_reporting', summary: 'Variant 1 100%' },
+      { name: 'hash:704914099', summary: 'Variant 1 6%' },
+    ],
+  });
+  assert.ok(e.description.includes('2023-09_iar_user_reporting : Variant 1 100%'));
+  assert.ok(e.description.includes('hash:704914099 : Variant 1 6%'));
+});

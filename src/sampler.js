@@ -290,6 +290,9 @@ function labReportEmbed(s) {
     '• Changements détectés : **' + s.changes + '**' + (s.isFirst ? ' (seed initial — pas de notif de changement)' : ''),
     '• Source : **API Discord uniquement** — aucune donnée communautaire',
   ];
+  for (const e of (s.experiments || []).slice(0, 12)) {
+    lines.push('  – ' + e.name + ' : ' + e.summary);
+  }
   return {
     title: 'Sampler — run report',
     description: lines.join('\n').slice(0, 4000),
@@ -361,12 +364,17 @@ async function main(opts = {}) {
   // Estimations + diff (premier run = seed silencieux, pas de flood)
   const changes = [];
   let measured = 0;
+  const measuredExperiments = [];
   for (const [key, st] of Object.entries(state.experiments)) {
     const window = est.mergeWindow(st.runs, WINDOW_RUNS);
     if (!window.total) continue;
     const pcts = est.estimatePcts(window, MIN_N);
     if (!pcts.length) continue;
     measured++;
+    measuredExperiments.push({
+      name: est.nameFor(key, names),
+      summary: pcts.map((t) => t.label + ' ' + t.pct + '%').join(', '),
+    });
     if (isFirst) continue;
     const hadAnnounced = st.announced && Object.keys(st.announced).length > 0;
     const cls = est.classifyChange(hadAnnounced ? st.announced : null, pcts, MIN_DELTA);
@@ -392,7 +400,7 @@ async function main(opts = {}) {
   if (!isFirst && changes.length) embeds.push(...buildChangeEmbeds(changes.slice(0, 9)));
   if (LAB && WEBHOOK) {
     embeds.push(
-      labReportEmbed({ ok, fail, hashes: byHash.size, measured, changes: changes.length, elapsed, stopReason, isFirst })
+      labReportEmbed({ ok, fail, hashes: byHash.size, measured, changes: changes.length, elapsed, stopReason, isFirst, experiments: measuredExperiments })
     );
   }
 

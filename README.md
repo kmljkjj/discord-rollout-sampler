@@ -17,7 +17,7 @@ Les pourcentages user étaient lus dans le gist communautaire (également collec
 ## Sources de données
 
 - **API Discord uniquement** (canary → stable en fallback). Aucun gist communautaire, aucun worker tiers, aucune donnée Wumpus Central.
-- Les noms d'expériences (optionnels) proviennent de `known_experiment_ids.json` du dépôt discord-canary-scraper (nos propres données scrapées), hashés via murmur3.
+- Les noms d'expériences (optionnels) proviennent de `data/known_experiment_ids.json` — **copie embarquée dans ce dépôt** de nos propres données scrapées depuis le build public du client Discord (hashées via murmur3). Le dépôt principal étant privé, son URL raw est inaccessible : le sampler charge donc cette copie locale, publique. Pour rafraîchir les noms, mettre à jour ce fichier depuis `discord-canary-scraper`. Les expériences absentes de cette liste s'affichent sous la forme `hash:NNNN`.
 
 ## Setup webhook
 

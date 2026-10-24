@@ -56,3 +56,9 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après le premier run r�
 ## Tests
 
 `npm test` — statistiques (Wilson, agrégation, fenêtre, classification), boucle de sampling (fausse API, 429), embeds, webhook.
+
+## Première validation (2026-10-24)
+
+- Run 1 : 231 fingerprints sondés, 5 expériences suivies — workflow + CI verts.
+- Run 2 : 407 fingerprints (budget 7 min), fenêtre de 638 échantillons → 3 expériences mesurées (Variant 1/11 à 100 %, ±0,3).
+- `data/sampler_state.json` committé automatiquement par le workflow après chaque run.

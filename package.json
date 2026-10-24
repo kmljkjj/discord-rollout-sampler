@@ -5,7 +5,7 @@
   "main": "src/sampler.js",
   "scripts": {
     "start": "node src/sampler.js",
-    "check": "node --check src/sampler.js && node --check src/estimate.js && node --check src/murmur3.js",
+    "check": "node --check src/sampler.js && node --check src/estimate.js && node --check src/murmur3.js && node --check src/guild.js",
     "test": "node --test test/"
   },
   "engines": {

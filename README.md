@@ -19,6 +19,17 @@ Les pourcentages user étaient lus dans le gist communautaire (également collec
 - **API Discord uniquement** (canary → stable en fallback). Aucun gist communautaire, aucun worker tiers, aucune donnée Wumpus Central.
 - Les noms d'expériences (optionnels) proviennent de `data/known_experiment_ids.json` — **copie embarquée dans ce dépôt** de nos propres données scrapées depuis le build public du client Discord (hashées via murmur3). Le dépôt principal étant privé, son URL raw est inaccessible : le sampler charge donc cette copie locale, publique. Pour rafraîchir les noms, mettre à jour ce fichier depuis `discord-canary-scraper`. Les expériences absentes de cette liste s'affichent sous la forme `hash:NNNN`.
 
+## Guild experiments (exact)
+
+Le sampler lit aussi les **rollouts guild** (expériences de serveurs) : `GET /experiments?with_guild_experiments=true` expose le wire brut de Discord — pour chaque expérience, les intervalles de rollout de chaque bucket sur une échelle 0-10000. Le % est donc **exact** (composition publiée par Discord), pas une estimation. Lecture directe de l'API, aucune donnée communautaire ; décodage adapté de notre dépôt principal.
+
+Deux catégories cohabitent :
+
+- **user** : estimation par échantillonnage de fingerprints (invités anonymes — ~5 expériences visibles, celles que Discord assigne sans compte) ;
+- **guild** : % exacts lus dans le wire (~500 expériences), deltas ≥ `SAMPLER_MIN_DELTA` annoncés.
+
+Les % guild sont par nature identiques pour tout lecteur de cette API : c'est une donnée publiée par Discord elle-même, pas une copie de qui que ce soit.
+
 ## Setup webhook
 
 1. Créer un webhook Discord.
@@ -55,11 +66,12 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 
 ## Tests
 
-`npm test` — statistiques (Wilson, agrégation, fenêtre, classification), boucle de sampling (fausse API, 429), embeds, webhook.
+`npm test` — statistiques (Wilson, agrégation, fenêtre, classification), boucle de sampling (fausse API, 429), guild wire (décodage, diff, fetch), embeds, webhook.
 
 ## Première validation (2026-10-24)
 
 - Run 1 : 231 fingerprints sondés, 5 expériences suivies — workflow + CI verts.
 - Run 2 : 407 fingerprints (budget 7 min), fenêtre de 638 échantillons → 3 expériences mesurées (Variant 1/11 à 100 %, ±0,3).
 - 23h00 : premier run **cron** (déclenché en retard par GitHub, comme souvent sur un workflow récent) — rapport LAB reçu. Constat : le push d'état était rejeté quand `main` bougeait pendant un run (checkout figé au SHA du push déclencheur, pas de rebase) → correctif : checkout `ref: main` + `pull --rebase` avec retry.
+- Extension **guild experiments** — % exacts lus dans le wire Discord (`src/guild.js`), en plus des % user estimés par échantillonnage.
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.

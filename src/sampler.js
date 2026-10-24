@@ -33,6 +33,7 @@ const path = require('path');
 const crypto = require('crypto');
 const { murmur3 } = require('./murmur3');
 const est = require('./estimate');
+const guild = require('./guild');
 
 // ---- Config ----
 const DATA_DIR = path.join(__dirname, '..', 'data');
@@ -288,6 +289,11 @@ function labReportEmbed(s) {
     '• Fingerprints sondés : **' + s.ok + '** (' + s.fail + ' échecs, ' + s.elapsed + 's' + (s.stopReason ? ' · arrêt ' + s.stopReason : '') + ')',
     '• Expériences suivies : **' + s.hashes + '** · mesurées : **' + s.measured + '**',
     '• Changements détectés : **' + s.changes + '**' + (s.isFirst ? ' (seed initial — pas de notif de changement)' : ''),
+    '• Guild experiments (exact) : **' +
+      (s.guild ? s.guild.count : 'indisponibles') +
+      '**' +
+      (s.guild && s.guild.source ? ' · ' + s.guild.source : '') +
+      (s.guild && s.guildChanges != null ? ' · Δ: ' + s.guildChanges : ''),
     '• Source : **API Discord uniquement** — aucune donnée communautaire',
   ];
   for (const e of (s.experiments || []).slice(0, 12)) {
@@ -340,6 +346,50 @@ async function main(opts = {}) {
   const elapsed = Math.round((Date.now() - t0) / 1000);
   console.log(
     'Échantillonnage:', ok, 'ok,', fail, 'échecs,', elapsed + 's,', byHash.size, 'hashes' + (stopReason ? ' · arrêt: ' + stopReason : '')
+  );
+
+  // ---- Guild experiments : % exacts lus dans le wire Discord ----
+  // cf. src/guild.js — lecture directe (aucune donnée communautaire)
+  const guildRes = await guild.fetchGuildExperiments(fetchImpl, (h) => est.nameFor(String(h), names));
+  const guildPrev =
+    state.guild && Array.isArray(state.guild.experiments) ? state.guild.experiments : [];
+  const guildIsFirst = guildPrev.length === 0;
+  let guildInfo = null;
+  let guildChanges = [];
+  if (guildRes && guildRes.list.length) {
+    const degraded =
+      guildPrev.length >= 20 && guildRes.list.length < Math.max(5, Math.floor(guildPrev.length * 0.4));
+    if (degraded) {
+      console.warn('Guild : collection suspecte (' + guildRes.list.length + ' vs ' + guildPrev.length + ') — état conservé');
+      guildInfo = guildPrev.length
+        ? { count: guildPrev.length, source: 'état précédent (collection suspecte)' }
+        : null;
+    } else {
+      if (!guildIsFirst) guildChanges = guild.diffGuildExperiments(guildPrev, guildRes.list, MIN_DELTA);
+      state.guild = {
+        ts: nowIso(),
+        source: guildRes.source,
+        count: guildRes.list.length,
+        experiments: guildRes.list.map((e) => ({
+          id: e.id,
+          hash: e.hash,
+          treatments: e.treatments.map((t) => ({ bucket: t.bucket, pct: t.pct })),
+        })),
+      };
+      guildInfo = { count: guildRes.list.length, source: guildRes.source };
+    }
+  } else if (guildPrev.length) {
+    console.warn('Guild experiments indisponibles — état précédent conservé');
+    guildInfo = { count: guildPrev.length, source: 'état précédent (endpoint muet)' };
+  } else {
+    console.warn('Guild experiments indisponibles (réponse vide ou refusée)');
+  }
+  console.log(
+    'Guild experiments:',
+    guildInfo ? guildInfo.count + ' (' + guildInfo.source + ')' : 'INDISPONIBLES',
+    '· changements:',
+    guildChanges.length,
+    guildIsFirst ? '(seed)' : ''
   );
 
   // Mise à jour de l'état par expérience
@@ -395,12 +445,27 @@ async function main(opts = {}) {
   );
   console.log('Mesurées (n≥' + MIN_N + '):', measured, '· changements:', changes.length, isFirst ? '(seed)' : '');
 
-  // Embeds : changements (max 9) + rapport LAB
+  // Embeds : changements user (max 6) + changements guild (max 3) + rapport LAB (<= 10 embeds)
   const embeds = [];
-  if (!isFirst && changes.length) embeds.push(...buildChangeEmbeds(changes.slice(0, 9)));
+  if (!isFirst && changes.length) embeds.push(...buildChangeEmbeds(changes.slice(0, 6)));
+  if (!guildIsFirst && guildChanges.length) {
+    embeds.push(...guildChanges.slice(0, 3).map((c) => guild.guildChangeEmbed(c)));
+  }
   if (LAB && WEBHOOK) {
     embeds.push(
-      labReportEmbed({ ok, fail, hashes: byHash.size, measured, changes: changes.length, elapsed, stopReason, isFirst, experiments: measuredExperiments })
+      labReportEmbed({
+        ok,
+        fail,
+        hashes: byHash.size,
+        measured,
+        changes: changes.length,
+        elapsed,
+        stopReason,
+        isFirst,
+        experiments: measuredExperiments,
+        guild: guildInfo,
+        guildChanges: guildIsFirst ? 0 : guildChanges.length,
+      })
     );
   }
 

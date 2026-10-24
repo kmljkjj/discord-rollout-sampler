@@ -7,6 +7,13 @@
       "fail": 6,
       "hashes": 5,
       "stopReason": "budget"
+    },
+    {
+      "ts": "2026-10-24T20:57:34.405Z",
+      "ok": 407,
+      "fail": 8,
+      "hashes": 5,
+      "stopReason": "budget"
     }
   ],
   "experiments": {
@@ -19,6 +26,16 @@
               "n": 10,
               "posMin": 9521,
               "posMax": 9994
+            }
+          }
+        },
+        {
+          "total": 27,
+          "buckets": {
+            "1": {
+              "n": 27,
+              "posMin": 9513,
+              "posMax": 9999
             }
           }
         }
@@ -37,6 +54,16 @@
               "posMax": 473
             }
           }
+        },
+        {
+          "total": 12,
+          "buckets": {
+            "1": {
+              "n": 12,
+              "posMin": 0,
+              "posMax": 467
+            }
+          }
         }
       ],
       "announced": {},
@@ -53,9 +80,21 @@
               "posMax": 9910
             }
           }
+        },
+        {
+          "total": 407,
+          "buckets": {
+            "1": {
+              "n": 407,
+              "posMin": 56,
+              "posMax": 9999
+            }
+          }
         }
       ],
-      "announced": {},
+      "announced": {
+        "1": 100
+      },
       "missed": 0
     },
     "3013881204": {
@@ -69,9 +108,21 @@
               "posMax": 9901
             }
           }
+        },
+        {
+          "total": 407,
+          "buckets": {
+            "11": {
+              "n": 407,
+              "posMin": 7,
+              "posMax": 9992
+            }
+          }
         }
       ],
-      "announced": {},
+      "announced": {
+        "11": 100
+      },
       "missed": 0
     },
     "4055210228": {
@@ -85,12 +136,67 @@
               "posMax": 9895
             }
           }
+        },
+        {
+          "total": 407,
+          "buckets": {
+            "1": {
+              "n": 407,
+              "posMin": 9,
+              "posMax": 9988
+            }
+          }
         }
       ],
-      "announced": {},
+      "announced": {
+        "1": 100
+      },
       "missed": 0
     }
   },
-  "lastChanges": [],
-  "scrapedAt": "2026-10-24T20:48:51.418Z"
+  "lastChanges": [
+    {
+      "name": "hash:2180379513",
+      "kind": "new",
+      "deltas": [
+        {
+          "bucket": 1,
+          "label": "Variant 1",
+          "from": 0,
+          "to": 100,
+          "delta": 100,
+          "ciPct": 0.3
+        }
+      ]
+    },
+    {
+      "name": "hash:3013881204",
+      "kind": "new",
+      "deltas": [
+        {
+          "bucket": 11,
+          "label": "Variant 11",
+          "from": 0,
+          "to": 100,
+          "delta": 100,
+          "ciPct": 0.3
+        }
+      ]
+    },
+    {
+      "name": "hash:4055210228",
+      "kind": "new",
+      "deltas": [
+        {
+          "bucket": 1,
+          "label": "Variant 1",
+          "from": 0,
+          "to": 100,
+          "delta": 100,
+          "ciPct": 0.3
+        }
+      ]
+    }
+  ],
+  "scrapedAt": "2026-10-24T20:57:34.407Z"
 }

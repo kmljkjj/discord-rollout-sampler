@@ -45,7 +45,7 @@ const TARGET = clampInt(process.env.SAMPLER_TARGET, 1200, 200, 4000);
 const CONC = clampInt(process.env.SAMPLER_CONCURRENCY, 3, 1, 6);
 const DELAY_MS = clampInt(process.env.SAMPLER_DELAY_MS, 250, 0, 5000);
 const MAX_MS = clampInt(process.env.SAMPLER_MAX_MS, 240000, 30000, 600000);
-const WINDOW_RUNS = clampInt(process.env.SAMPLER_WINDOW_RUNS, 3, 1, 10);
+const WINDOW_RUNS = clampInt(process.env.SAMPLER_WINDOW_RUNS, 3, 1, 48);
 const MIN_N = clampInt(process.env.SAMPLER_MIN_N, 500, 50, 10000);
 const MIN_DELTA = Number(process.env.SAMPLER_MIN_DELTA || '2');
 const LAB = String(process.env.SAMPLER_LAB ?? '1') === '1';

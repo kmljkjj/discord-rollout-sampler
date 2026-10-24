@@ -31,7 +31,7 @@ Aucun token Discord n'est nécessaire (le sampling est anonyme).
 ## Workflows
 
 - `ci.yml` : `node --check` + tests unitaires à chaque push.
-- `sampler.yml` : run du sampler à chaque push (hors `data/**`) + toutes les 30 min + `workflow_dispatch`. Committe l'état après chaque run.
+- `sampler.yml` : run du sampler à chaque push (hors `data/**`) + toutes les 30 min + `workflow_dispatch`. Committe l'état après chaque run — le run part toujours du `main` à jour (checkout `ref: main`) et le push d'état est protégé par un `pull --rebase` avec retry : un commit sur `main` pendant un run ne fait plus perdre l'état.
 
 En mode LAB (`SAMPLER_LAB=1`, défaut), chaque run envoie un rapport au webhook — idéal pour valider le système. Passer à `0` pour ne notifier que les changements réels.
 
@@ -61,4 +61,5 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 
 - Run 1 : 231 fingerprints sondés, 5 expériences suivies — workflow + CI verts.
 - Run 2 : 407 fingerprints (budget 7 min), fenêtre de 638 échantillons → 3 expériences mesurées (Variant 1/11 à 100 %, ±0,3).
+- 23h00 : premier run **cron** (déclenché en retard par GitHub, comme souvent sur un workflow récent) — rapport LAB reçu. Constat : le push d'état était rejeté quand `main` bougeait pendant un run (checkout figé au SHA du push déclencheur, pas de rebase) → correctif : checkout `ref: main` + `pull --rebase` avec retry.
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.

@@ -1,0 +1,96 @@
+{
+  "version": 1,
+  "runs": [
+    {
+      "ts": "2026-10-24T20:48:51.417Z",
+      "ok": 231,
+      "fail": 6,
+      "hashes": 5,
+      "stopReason": "budget"
+    }
+  ],
+  "experiments": {
+    "704914099": {
+      "runs": [
+        {
+          "total": 10,
+          "buckets": {
+            "1": {
+              "n": 10,
+              "posMin": 9521,
+              "posMax": 9994
+            }
+          }
+        }
+      ],
+      "announced": {},
+      "missed": 0
+    },
+    "1144304849": {
+      "runs": [
+        {
+          "total": 11,
+          "buckets": {
+            "1": {
+              "n": 11,
+              "posMin": 3,
+              "posMax": 473
+            }
+          }
+        }
+      ],
+      "announced": {},
+      "missed": 0
+    },
+    "2180379513": {
+      "runs": [
+        {
+          "total": 231,
+          "buckets": {
+            "1": {
+              "n": 231,
+              "posMin": 12,
+              "posMax": 9910
+            }
+          }
+        }
+      ],
+      "announced": {},
+      "missed": 0
+    },
+    "3013881204": {
+      "runs": [
+        {
+          "total": 231,
+          "buckets": {
+            "11": {
+              "n": 231,
+              "posMin": 9,
+              "posMax": 9901
+            }
+          }
+        }
+      ],
+      "announced": {},
+      "missed": 0
+    },
+    "4055210228": {
+      "runs": [
+        {
+          "total": 231,
+          "buckets": {
+            "1": {
+              "n": 231,
+              "posMin": 63,
+              "posMax": 9895
+            }
+          }
+        }
+      ],
+      "announced": {},
+      "missed": 0
+    }
+  },
+  "lastChanges": [],
+  "scrapedAt": "2026-10-24T20:48:51.418Z"
+}

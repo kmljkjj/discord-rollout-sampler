@@ -1,0 +1,42 @@
+name: sampler
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - 'data/**'
+  schedule:
+    - cron: '*/30 * * * *'
+  workflow_dispatch:
+
+concurrency:
+  group: sampler
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: npm install
+      - name: Lancer le sampler
+        env:
+          SAMPLER_WEBHOOK_URL: ${{ secrets.SAMPLER_WEBHOOK_URL }}
+        run: node src/sampler.js
+      - name: Commit l'état
+        run: |
+          git config user.name "sampler-bot"
+          git config user.email "actions@github.com"
+          git add data/sampler_state.json
+          if git diff --cached --quiet; then
+            echo "rien à committer"
+          else
+            git commit -m "state: run sampler"
+            git push
+          fi

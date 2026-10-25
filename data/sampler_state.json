@@ -151,21 +151,26 @@
         "ios": 72
       },
       "followupNew": 48
+    },
+    {
+      "ts": "2026-10-25T14:14:40.712Z",
+      "ok": 366,
+      "fail": 3,
+      "hashes": 7,
+      "stopReason": "budget",
+      "profiles": {
+        "web-ptb": 73,
+        "web-canary": 73,
+        "android": 73,
+        "web-stable": 74,
+        "ios": 73
+      },
+      "followupNew": 29
     }
   ],
   "experiments": {
     "704914099": {
       "runs": [
-        {
-          "total": 33,
-          "buckets": {
-            "1": {
-              "n": 33,
-              "posMin": 9503,
-              "posMax": 9988
-            }
-          }
-        },
         {
           "total": 14,
           "buckets": {
@@ -285,6 +290,16 @@
               "posMax": 9981
             }
           }
+        },
+        {
+          "total": 37,
+          "buckets": {
+            "1": {
+              "n": 37,
+              "posMin": 9505,
+              "posMax": 9990
+            }
+          }
         }
       ],
       "announced": {
@@ -294,16 +309,6 @@
     },
     "1144304849": {
       "runs": [
-        {
-          "total": 24,
-          "buckets": {
-            "1": {
-              "n": 24,
-              "posMin": 2,
-              "posMax": 454
-            }
-          }
-        },
         {
           "total": 25,
           "buckets": {
@@ -423,6 +428,16 @@
               "posMax": 493
             }
           }
+        },
+        {
+          "total": 27,
+          "buckets": {
+            "1": {
+              "n": 27,
+              "posMin": 21,
+              "posMax": 493
+            }
+          }
         }
       ],
       "announced": {
@@ -432,16 +447,6 @@
     },
     "2180379513": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "1": {
-              "n": 496,
-              "posMin": 64,
-              "posMax": 9991
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -561,6 +566,16 @@
               "posMax": 9972
             }
           }
+        },
+        {
+          "total": 366,
+          "buckets": {
+            "1": {
+              "n": 366,
+              "posMin": 12,
+              "posMax": 9951
+            }
+          }
         }
       ],
       "announced": {
@@ -609,6 +624,16 @@
               "posMax": 9908
             }
           }
+        },
+        {
+          "total": 220,
+          "buckets": {
+            "1": {
+              "n": 220,
+              "posMin": 13,
+              "posMax": 9996
+            }
+          }
         }
       ],
       "announced": {
@@ -618,16 +643,6 @@
     },
     "3013881204": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "11": {
-              "n": 496,
-              "posMin": 23,
-              "posMax": 9987
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -747,6 +762,16 @@
               "posMax": 9998
             }
           }
+        },
+        {
+          "total": 220,
+          "buckets": {
+            "11": {
+              "n": 220,
+              "posMin": 72,
+              "posMax": 9976
+            }
+          }
         }
       ],
       "announced": {
@@ -795,6 +820,16 @@
               "posMax": 9960
             }
           }
+        },
+        {
+          "total": 220,
+          "buckets": {
+            "3": {
+              "n": 220,
+              "posMin": 104,
+              "posMax": 9959
+            }
+          }
         }
       ],
       "announced": {
@@ -804,16 +839,6 @@
     },
     "4055210228": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "1": {
-              "n": 496,
-              "posMin": 3,
-              "posMax": 9989
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -933,6 +958,16 @@
               "posMax": 9996
             }
           }
+        },
+        {
+          "total": 366,
+          "buckets": {
+            "1": {
+              "n": 366,
+              "posMin": 17,
+              "posMax": 9965
+            }
+          }
         }
       ],
       "announced": {
@@ -942,9 +977,9 @@
     }
   },
   "lastChanges": [],
-  "scrapedAt": "2026-10-25T10:06:36.384Z",
+  "scrapedAt": "2026-10-25T14:14:41.093Z",
   "guild": {
-    "ts": "2026-10-25T10:06:36.188Z",
+    "ts": "2026-10-25T14:14:40.712Z",
     "source": "stable",
     "auth": "token",
     "attempts": [

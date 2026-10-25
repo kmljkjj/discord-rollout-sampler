@@ -35,6 +35,13 @@
       "fail": 4,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-25T00:00:33.188Z",
+      "ok": 402,
+      "fail": 8,
+      "hashes": 5,
+      "stopReason": "budget"
     }
   ],
   "experiments": {
@@ -87,6 +94,16 @@
               "n": 33,
               "posMin": 9503,
               "posMax": 9988
+            }
+          }
+        },
+        {
+          "total": 14,
+          "buckets": {
+            "1": {
+              "n": 14,
+              "posMin": 9521,
+              "posMax": 9971
             }
           }
         }
@@ -145,6 +162,16 @@
               "posMax": 454
             }
           }
+        },
+        {
+          "total": 25,
+          "buckets": {
+            "1": {
+              "n": 25,
+              "posMin": 11,
+              "posMax": 483
+            }
+          }
         }
       ],
       "announced": {},
@@ -199,6 +226,16 @@
               "n": 496,
               "posMin": 64,
               "posMax": 9991
+            }
+          }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 21,
+              "posMax": 9970
             }
           }
         }
@@ -259,6 +296,16 @@
               "posMax": 9987
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "11": {
+              "n": 402,
+              "posMin": 6,
+              "posMax": 9994
+            }
+          }
         }
       ],
       "announced": {
@@ -317,6 +364,16 @@
               "posMax": 9989
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 39,
+              "posMax": 9974
+            }
+          }
         }
       ],
       "announced": {
@@ -326,5 +383,66 @@
     }
   },
   "lastChanges": [],
-  "scrapedAt": "2026-10-24T23:08:13.150Z"
+  "scrapedAt": "2026-10-25T00:00:33.413Z",
+  "guild": {
+    "ts": "2026-10-25T00:00:33.188Z",
+    "source": "canary",
+    "count": 5,
+    "experiments": [
+      {
+        "id": "2022-07_voice_in_threads",
+        "hash": 944104242,
+        "treatments": [
+          {
+            "bucket": 1,
+            "pct": 100
+          }
+        ]
+      },
+      {
+        "id": "2022-11_default_disable_mass_mention",
+        "hash": 2462216785,
+        "treatments": [
+          {
+            "bucket": -1,
+            "pct": 100
+          },
+          {
+            "bucket": 1,
+            "pct": 100
+          }
+        ]
+      },
+      {
+        "id": "2022-12_mention_raid_limit",
+        "hash": 1318029053,
+        "treatments": [
+          {
+            "bucket": 1,
+            "pct": 100
+          }
+        ]
+      },
+      {
+        "id": "2023-02_guest_voice_invites",
+        "hash": 1727857487,
+        "treatments": [
+          {
+            "bucket": -1,
+            "pct": 100
+          }
+        ]
+      },
+      {
+        "id": "hash:3633668656",
+        "hash": 3633668656,
+        "treatments": [
+          {
+            "bucket": 1,
+            "pct": 100
+          }
+        ]
+      }
+    ]
+  }
 }

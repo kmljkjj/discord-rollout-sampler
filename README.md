@@ -107,6 +107,7 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 | SAMPLER_NAMES_URL | (copie du dépôt) | liste d'IDs fallback pour nommer les hash |
 | SAMPLER_NAMES_TTL_H | 12 | TTL du scan des builds (par canal) |
 | SAMPLER_NAMES_MAX_MS | 300000 | budget temps du scan des builds |
+| SAMPLER_NAMES_MAX_BYTES | 67108864 | taille max d'un fichier scanné (le bundle principal du client fait 10-30 Mo) |
 | SAMPLER_NAMES_CHANNELS | canary,stable,ptb | canaux scannés pour les noms |
 | SAMPLER_PROFILES | (tous) | sous-ensemble de profils client (JSON) |
 | SAMPLER_BUILD | 451408 | client_build_number des super-props web |
@@ -133,3 +134,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - **Reconstruction de ranges** (méthode des trackers, vérifiée) : le sampler collecte désormais les positions `hash_result` par bucket et reconstruit les ranges en segments cumulés sur la fenêtre — les % user « exacts » des trackers sont eux-mêmes estimés ainsi depuis l'API publique, rien ne nous est inaccessible.
 - **Nommage** (2026-10-25) : pourquoi des `hash:NNNN` ? L'API ne renvoie que le hash (= murmur3 du nom) ; les 5 hash non nommés du run courant n'existent dans aucune liste publique (gist, Wumpus, advaith, notre scrape 547 ids) - expériences sans code client, non nommables par quiconque, trackers inclus. Cf. section "Nommage des hash".
 - **Recherche de noms autonome** (2026-10-25) : `src/names.js` — le sampler scanne lui-même les builds publics (canary/ptb/stable : `/app` → assets → chunks webpack) pour nommer les hash ; cache par canal 12 h dans l'état (`state.names`), ids gardés 30 jours, fallback liste du dépôt. Zéro source communautaire.
+- **Fix scan des builds** (2026-10-25) : la garde de taille (16 Mo) rejetait le bundle principal du client (~10-30 Mo) -> premier scan à 0 id extrait (seul le fallback nommait) ; défaut porté à 64 Mo (`SAMPLER_NAMES_MAX_BYTES`) et cache versionné (`version: 2`) pour forcer un rescan complet propre.

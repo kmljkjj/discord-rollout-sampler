@@ -27,7 +27,7 @@
  *   SAMPLER_NAMES_TTL_H (12), SAMPLER_NAMES_MAX_MS (300000),
  *   SAMPLER_NAMES_CONCURRENCY (8), SAMPLER_NAMES_CHANNELS ('canary,stable,ptb'),
  *   SAMPLER_NAMES_KEEP_DAYS (30), SAMPLER_NAMES_MAX_CHUNKS (2500),
- *   SAMPLER_NAMES_MAX_BYTES (16777216), SAMPLER_NAMES_URL (fallback),
+ *   SAMPLER_NAMES_MAX_BYTES (67108864), SAMPLER_NAMES_URL (fallback),
  *   SAMPLER_UA
  */
 
@@ -45,7 +45,10 @@ const DEFAULTS = {
   conc: envNum('SAMPLER_NAMES_CONCURRENCY', 8, 1, 16),
   keepDays: envNum('SAMPLER_NAMES_KEEP_DAYS', 30, 1, 365),
   maxChunks: envNum('SAMPLER_NAMES_MAX_CHUNKS', 2500, 50, 20000),
-  maxBytes: envNum('SAMPLER_NAMES_MAX_BYTES', 16 * 1024 * 1024, 64 * 1024, 64 * 1024 * 1024),
+  // Le bundle principal du client fait 10-30 Mo : la garde doit être LARGE,
+  // sinon on rejette précisément le fichier qui contient les ids
+  // d'expériences et la table des chunks (bug du 1er scan : 0 id, 8 chunks).
+  maxBytes: envNum('SAMPLER_NAMES_MAX_BYTES', 64 * 1024 * 1024, 1024 * 1024, 512 * 1024 * 1024),
   channels: String(process.env.SAMPLER_NAMES_CHANNELS || 'canary,stable,ptb')
     .split(',')
     .map((s) => s.trim())
@@ -57,6 +60,13 @@ const DEFAULTS = {
     process.env.SAMPLER_UA ||
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
 };
+
+/**
+ * Version du cache state.names : un bump invalide les caches existants
+ * (rescan complet au run suivant) — utilisé quand le comportement du scan
+ * change (ex. garde de taille corrigée : 16 Mo -> 64 Mo).
+ */
+const CACHE_VERSION = 2;
 
 // ---- Fonctions pures (testables) ----
 
@@ -311,8 +321,10 @@ async function loadNames(arg) {
   const cache = state.names && typeof state.names === 'object' && !Array.isArray(state.names) ? state.names : null;
   const prevChannels = (cache && cache.channels) || {};
 
+  const cacheOk = cache && Number(cache.version) === CACHE_VERSION;
+
   // 1. Tous les canaux frais : zéro réseau
-  if (isFresh(cache, now(), ttlH, channels)) {
+  if (cacheOk && isFresh(cache, now(), ttlH, channels)) {
     const ids = Object.keys((cache && cache.lastSeen) || {});
     log('Noms : cache frais — ' + ids.length + ' ids (' + channelsAges(prevChannels, now()) + ')');
     return {
@@ -324,6 +336,7 @@ async function loadNames(arg) {
 
   // 2. Scan des canaux périmés (dans l'ordre, budget partagé)
   const stale = channels.filter((ch) => {
+    if (!cacheOk) return true; // cache d'un ancien format -> rescan complet
     const t = Date.parse(prevChannels[ch] && prevChannels[ch].scannedAt);
     return !(now() - t < ttlH * 3600 * 1000);
   });
@@ -392,7 +405,7 @@ async function loadNames(arg) {
   const totalIds = Object.keys(lastSeen).length;
   if (totalIds) {
     state.names = {
-      version: 1,
+      version: CACHE_VERSION,
       channels: newChannels,
       lastSeen,
     };

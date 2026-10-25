@@ -127,7 +127,7 @@ test('loadNames : tous les canaux frais -> aucun réseau', async () => {
   const recent = new Date(Date.now() - 3600000).toISOString();
   const state = {
     names: {
-      version: 1,
+      version: 2,
       channels: { canary: { scrapedAt: null, scannedAt: recent, buildNumber: '650180', ids: 3 } },
       lastSeen: { '2026-10-macaron': recent },
     },
@@ -165,7 +165,7 @@ test('loadNames : canal périmé -> rescan, fallback liste, ids anciens conserv�
   };
   const state = {
     names: {
-      version: 1,
+      version: 2,
       channels: { canary: { scannedAt: '2026-10-01T00:00:00Z' } }, // périmé -> rescan
       lastSeen: { '2023-09_iar_user_reporting': '2026-10-24T00:00:00Z' }, // récent -> conservé
     },
@@ -190,4 +190,39 @@ test('loadNames : canal périmé -> rescan, fallback liste, ids anciens conserv�
   assert.equal(state.names.channels.canary.buildNumber, '650180');
   assert.ok(state.names.lastSeen['2026-10-macaron']);
   assert.ok(state.names.lastSeen['2025-11_tida_webform']);
+});
+
+test('loadNames : cache v1 (ancien format) -> rescan même si récent, puis re-versionné', async () => {
+  const recent = new Date(Date.now() - 3600000).toISOString();
+  const state = {
+    names: { version: 1, channels: { canary: { scannedAt: recent } }, lastSeen: {} },
+  };
+  let appFetched = false;
+  const fetchImpl = async (url) => {
+    if (url.endsWith('/app')) {
+      appFetched = true;
+      return okText('<script src="/assets/web.aaa111.js"></script>');
+    }
+    if (url === 'https://list.example/ids.json') {
+      return {
+        ok: true,
+        status: 200,
+        headers: { get: () => null },
+        json: async () => ['2026-10-macaron'],
+        text: async () => '',
+      };
+    }
+    return { ok: false, status: 404, headers: { get: () => null }, text: async () => '' };
+  };
+  const res = await names.loadNames({
+    fetchImpl,
+    state,
+    ttlH: 12,
+    channels: ['canary'],
+    fallbackUrl: 'https://list.example/ids.json',
+  });
+  assert.ok(appFetched); // le cache v1 ne compte jamais comme frais
+  assert.equal(res.info.source, 'fallback');
+  assert.equal(state.names.version, 2); // re-versionné
+  assert.ok(state.names.lastSeen['2026-10-macaron']);
 });

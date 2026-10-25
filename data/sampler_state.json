@@ -77,6 +77,13 @@
       "fail": 5,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-25T02:44:33.514Z",
+      "ok": 496,
+      "fail": 4,
+      "hashes": 5,
+      "stopReason": null
     }
   ],
   "experiments": {
@@ -189,6 +196,16 @@
               "n": 29,
               "posMin": 9535,
               "posMax": 9967
+            }
+          }
+        },
+        {
+          "total": 26,
+          "buckets": {
+            "1": {
+              "n": 26,
+              "posMin": 9521,
+              "posMax": 9999
             }
           }
         }
@@ -309,9 +326,21 @@
               "posMax": 493
             }
           }
+        },
+        {
+          "total": 25,
+          "buckets": {
+            "1": {
+              "n": 25,
+              "posMin": 31,
+              "posMax": 497
+            }
+          }
         }
       ],
-      "announced": {},
+      "announced": {
+        "1": 100
+      },
       "missed": 0
     },
     "2180379513": {
@@ -423,6 +452,16 @@
               "n": 495,
               "posMin": 38,
               "posMax": 9988
+            }
+          }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 20,
+              "posMax": 9954
             }
           }
         }
@@ -543,6 +582,16 @@
               "posMax": 9990
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "11": {
+              "n": 496,
+              "posMin": 13,
+              "posMax": 9997
+            }
+          }
         }
       ],
       "announced": {
@@ -661,6 +710,16 @@
               "posMax": 9974
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 23,
+              "posMax": 9892
+            }
+          }
         }
       ],
       "announced": {
@@ -671,7 +730,7 @@
   },
   "lastChanges": [
     {
-      "name": "hash:704914099",
+      "name": "hash:1144304849",
       "kind": "new",
       "deltas": [
         {
@@ -680,14 +739,14 @@
           "from": 0,
           "to": 100,
           "delta": 100,
-          "ciPct": 0.8
+          "ciPct": 0.7
         }
       ]
     }
   ],
-  "scrapedAt": "2026-10-25T02:36:17.529Z",
+  "scrapedAt": "2026-10-25T02:44:33.656Z",
   "guild": {
-    "ts": "2026-10-25T02:36:17.402Z",
+    "ts": "2026-10-25T02:44:33.514Z",
     "source": "stable",
     "auth": "token",
     "attempts": [

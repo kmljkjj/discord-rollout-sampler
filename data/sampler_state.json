@@ -121,21 +121,26 @@
         "ios": 91
       },
       "followupNew": 48
+    },
+    {
+      "ts": "2026-10-25T05:34:54.625Z",
+      "ok": 352,
+      "fail": 3,
+      "hashes": 7,
+      "stopReason": "budget",
+      "profiles": {
+        "web-ptb": 70,
+        "web-stable": 71,
+        "android": 70,
+        "web-canary": 70,
+        "ios": 71
+      },
+      "followupNew": 40
     }
   ],
   "experiments": {
     "704914099": {
       "runs": [
-        {
-          "total": 30,
-          "buckets": {
-            "1": {
-              "n": 30,
-              "posMin": 9552,
-              "posMax": 9997
-            }
-          }
-        },
         {
           "total": 16,
           "buckets": {
@@ -255,6 +260,16 @@
               "posMax": 9987
             }
           }
+        },
+        {
+          "total": 39,
+          "buckets": {
+            "1": {
+              "n": 39,
+              "posMin": 9507,
+              "posMax": 9970
+            }
+          }
         }
       ],
       "announced": {
@@ -264,16 +279,6 @@
     },
     "1144304849": {
       "runs": [
-        {
-          "total": 27,
-          "buckets": {
-            "1": {
-              "n": 27,
-              "posMin": 8,
-              "posMax": 496
-            }
-          }
-        },
         {
           "total": 16,
           "buckets": {
@@ -393,6 +398,16 @@
               "posMax": 497
             }
           }
+        },
+        {
+          "total": 37,
+          "buckets": {
+            "1": {
+              "n": 37,
+              "posMin": 12,
+              "posMax": 478
+            }
+          }
         }
       ],
       "announced": {
@@ -402,16 +417,6 @@
     },
     "2180379513": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "1": {
-              "n": 496,
-              "posMin": 7,
-              "posMax": 9983
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -531,6 +536,16 @@
               "posMax": 9985
             }
           }
+        },
+        {
+          "total": 352,
+          "buckets": {
+            "1": {
+              "n": 352,
+              "posMin": 22,
+              "posMax": 9941
+            }
+          }
         }
       ],
       "announced": {
@@ -559,6 +574,16 @@
               "posMax": 9998
             }
           }
+        },
+        {
+          "total": 211,
+          "buckets": {
+            "1": {
+              "n": 211,
+              "posMin": 0,
+              "posMax": 9975
+            }
+          }
         }
       ],
       "announced": {
@@ -568,16 +593,6 @@
     },
     "3013881204": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "11": {
-              "n": 496,
-              "posMin": 0,
-              "posMax": 9985
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -697,6 +712,16 @@
               "posMax": 9979
             }
           }
+        },
+        {
+          "total": 211,
+          "buckets": {
+            "11": {
+              "n": 211,
+              "posMin": 49,
+              "posMax": 9978
+            }
+          }
         }
       ],
       "announced": {
@@ -725,6 +750,16 @@
               "posMax": 9966
             }
           }
+        },
+        {
+          "total": 211,
+          "buckets": {
+            "3": {
+              "n": 211,
+              "posMin": 1,
+              "posMax": 9927
+            }
+          }
         }
       ],
       "announced": {
@@ -734,16 +769,6 @@
     },
     "4055210228": {
       "runs": [
-        {
-          "total": 496,
-          "buckets": {
-            "1": {
-              "n": 496,
-              "posMin": 1,
-              "posMax": 9989
-            }
-          }
-        },
         {
           "total": 402,
           "buckets": {
@@ -863,6 +888,16 @@
               "posMax": 9958
             }
           }
+        },
+        {
+          "total": 352,
+          "buckets": {
+            "1": {
+              "n": 352,
+              "posMin": 75,
+              "posMax": 9969
+            }
+          }
         }
       ],
       "announced": {
@@ -871,39 +906,10 @@
       "missed": 0
     }
   },
-  "lastChanges": [
-    {
-      "name": "hash:2582794089",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 1,
-          "label": "Variant 1",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.5
-        }
-      ]
-    },
-    {
-      "name": "hash:3948141150",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 3,
-          "label": "Variant 3",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.5
-        }
-      ]
-    }
-  ],
-  "scrapedAt": "2026-10-25T04:14:38.833Z",
+  "lastChanges": [],
+  "scrapedAt": "2026-10-25T05:34:54.785Z",
   "guild": {
-    "ts": "2026-10-25T04:14:38.613Z",
+    "ts": "2026-10-25T05:34:54.624Z",
     "source": "stable",
     "auth": "token",
     "attempts": [

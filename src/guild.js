@@ -16,6 +16,9 @@
  */
 
 const SCALE = 10000;
+// Token utilisateur optionnel : sans lui, Discord n expose qu un petit sous-ensemble
+// des guild experiments aux invités anonymes. Avec, la liste complète est lue.
+const TOKEN = process.env.SAMPLER_TOKEN || null;
 const UA =
   process.env.SAMPLER_UA ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -129,7 +132,14 @@ function decodeGuildWire(tuple, nameFor) {
 async function fetchGuildExperiments(fetchImpl, nameFor) {
   for (const url of GUILD_ENDPOINTS) {
     try {
-      const res = await fetchImpl(url, { headers: { 'User-Agent': UA, Accept: '*/*' }, timeout: 25000 });
+      const res = await fetchImpl(url, {
+        headers: {
+          'User-Agent': UA,
+          Accept: '*/*',
+          ...(TOKEN ? { Authorization: TOKEN } : {}),
+        },
+        timeout: 25000,
+      });
       if (!res.ok) continue;
       const data = await res.json();
       const raw = (data && Array.isArray(data.guild_experiments) && data.guild_experiments) || [];

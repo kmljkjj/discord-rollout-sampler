@@ -26,7 +26,7 @@ Le sampler lit aussi les **rollouts guild** (expériences de serveurs) : `GET /e
 Deux catégories cohabitent :
 
 - **user** : estimation par échantillonnage de fingerprints (invités anonymes — ~5 expériences visibles, celles que Discord assigne sans compte) ;
-- **guild** : % exacts lus dans le wire (~500 expériences), deltas ≥ `SAMPLER_MIN_DELTA` annoncés.
+- **guild** : % exacts lus dans le wire, deltas ≥ `SAMPLER_MIN_DELTA` annoncés. Anonymement, Discord n\u2019expose qu\u2019un petit sous-ensemble (~5) ; avec le secret `SAMPLER_TOKEN`, la liste complète (~500) est lue.
 
 Les % guild sont par nature identiques pour tout lecteur de cette API : c'est une donnée publiée par Discord elle-même, pas une copie de qui que ce soit.
 
@@ -38,6 +38,8 @@ Les % guild sont par nature identiques pour tout lecteur de cette API : c'est un
    - Value : l'URL du webhook
 
 Aucun token Discord n'est nécessaire (le sampling est anonyme).
+
+**Optionnel** : pour lire la liste guild *complète* (~500 expériences au lieu du sous-ensemble anonyme), ajouter le secret `SAMPLER_TOKEN` (un token utilisateur, comme ceux du dépôt principal). Sans ce secret, le sampler reste 100 % anonyme.
 
 ## Workflows
 

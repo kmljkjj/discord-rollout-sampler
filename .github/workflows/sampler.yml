@@ -36,6 +36,7 @@ jobs:
           SAMPLER_WINDOW_RUNS: '12'
           SAMPLER_MIN_N: '250'
           SAMPLER_NAMES_URL: 'https://raw.githubusercontent.com/kmljkjj/discord-rollout-sampler/main/data/known_experiment_ids.json'
+          SAMPLER_TOKEN: ${{ secrets.SAMPLER_TOKEN }}
         run: node src/sampler.js
       - name: Commit l'état
         run: |

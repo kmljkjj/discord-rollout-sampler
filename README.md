@@ -39,7 +39,7 @@ Les % guild sont par nature identiques pour tout lecteur de cette API : c'est un
 
 Aucun token Discord n'est nécessaire (le sampling est anonyme).
 
-**Optionnel** : le secret `SAMPLER_TOKEN` (un token utilisateur, comme ceux du dépôt principal) enrichit la liste guild de quelques expériences du contexte du compte — vérifié en run réel : 5 → 6, dont un rollout partiel à 95 %. Sans ce secret, le sampler reste 100 % anonyme. NB : la liste « complète » (~500) des trackers communautaires ne vient **pas** de cette API — le dépôt principal la lit dans un gist/worker communautaire.
+**Optionnel** : le secret `SAMPLER_TOKEN` (un token utilisateur, comme ceux du dépôt principal) enrichit la liste guild de quelques expériences du contexte du compte — vérifié en run réel : 5 → 6, dont un rollout partiel à 95 %. Sans ce secret, le sampler reste 100 % anonyme. Jusqu'à 5 comptes : `SAMPLER_TOKEN` puis `SAMPLER_TOKEN_2` … `_5` (équivalents des `DISCORD_USER_TOKEN_1..5` du dépôt principal) — chaque compte ajoute les expériences de son contexte, les réponses sont fusionnées par hash et les % recalculés sur l'union des ranges ; le rapport LAB affiche `token ×N`. NB : la liste « complète » (~500) des trackers communautaires ne vient **pas** de cette API — le dépôt principal la lit dans un gist/worker communautaire.
 
 ## Workflows
 
@@ -79,3 +79,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.
 
 - 02:11 → 02:36 : `SAMPLER_TOKEN` ajouté et diagnostiqué en runs réels (l'état archive `auth`, `raw` et chaque tentative host/version/statut). Verdict : le secret arrive bien (200 auth) ; v10 renvoie 5 guild experiments même authentifié, v9 en renvoie 6 — dont `2025-08_default_invite_expiration_guild` (Variant 2 à 95 %), invisible en anonyme. Conclusion vérifiée dans le dépôt principal : ses ~499 % user viennent du gist communautaire (agnonotdev) et du worker `experiments.dscrd.workers.dev` — PAS de l'API Discord seule. Le sampler mesure donc **tout ce que Discord nous montre** : c'est la limite de la mesure 100 % indépendante, pas un bug.
+- 02:44 : support **multi-tokens** (`SAMPLER_TOKEN_2..5`) — chaque token interroge la chaîne v9, fusion des réponses par hash (union des ranges par bucket, % recalculés), le LAB affiche `token ×N`. Un seul token = contexte d'un seul compte ; les autres tokens élargissent la collecte.

@@ -369,8 +369,10 @@ async function main(opts = {}) {
       if (!guildIsFirst) guildChanges = guild.diffGuildExperiments(guildPrev, guildRes.list, MIN_DELTA);
       const guildAuth = !guildRes.tokenEnv
         ? 'anonyme'
-        : guildRes.authSent
-          ? 'token'
+        : guildRes.tokens > 0
+          ? guildRes.tokens > 1
+            ? 'token ×' + guildRes.tokens
+            : 'token'
           : 'token refusé (fallback anonyme)';
       state.guild = {
         ts: nowIso(),

@@ -18,7 +18,20 @@
 const SCALE = 10000;
 // Token utilisateur optionnel : sans lui, Discord n expose qu un petit sous-ensemble
 // des guild experiments aux invités anonymes. Avec, la liste complète est lue.
-const TOKEN = (process.env.SAMPLER_TOKEN || '').trim() || null;
+// Jusqu'à 5 tokens utilisateur optionnels (SAMPLER_TOKEN, SAMPLER_TOKEN_2..5) —
+// comme les DISCORD_USER_TOKEN_1..5 du dépôt principal. Chaque compte ajoute
+// les guild experiments de SON contexte (serveurs) ; les réponses sont
+// fusionnées par hash (union des ranges par bucket). Sans token : anonyme.
+const TOKENS = [
+  process.env.SAMPLER_TOKEN,
+  process.env.SAMPLER_TOKEN_2,
+  process.env.SAMPLER_TOKEN_3,
+  process.env.SAMPLER_TOKEN_4,
+  process.env.SAMPLER_TOKEN_5,
+]
+  .map((t) => (t || '').trim())
+  .filter(Boolean)
+  .filter((t, i, a) => a.indexOf(t) === i); // dédoublonnage
 const UA =
   process.env.SAMPLER_UA ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -130,32 +143,51 @@ function decodeGuildWire(tuple, nameFor) {
     hash: Number(hash),
     revision,
     treatments,
+    intervals: [...byBucket.entries()].map((pair) => ({ bucket: Number(pair[0]), iv: pair[1] })),
     fingerprint: treatments.map((t) => t.bucket + ':' + Number(t.pct).toFixed(1)).join('|'),
   };
 }
 
 /**
- * Récupère les guild experiments (exact). Essaie chaque endpoint dans l'ordre ;
- * retourne null si aucun ne répond avec des données exploitables.
+ * Récupère les guild experiments (exact), en fusionnant jusqu'à 5 tokens :
+ * chaque token interroge la chaîne d'endpoints (v9 d'abord, cf. constat du
+ * 02:36 : v10 ne renvoie que le sous-ensemble même authentifié), et toutes les
+ * réponses sont fusionnées par hash — union des ranges par bucket, % recalculés.
+ * Sans aucun token : une passe anonyme. Si tous les tokens sont refusés
+ * (401...), une passe anonyme évite de perdre le suivi des % exacts.
  *
- * Diagnostic token (sans jamais divulguer sa valeur) : la réponse transporte
- * tokenEnv (secret présent dans l'env), authSent (en-tête Authorization envoyé),
- * rawCount (entrées brutes du wire) et attempts (statut HTTP par endpoint).
- * Si un token présent est refusé partout (401...), on retente la chaîne en
- * anonyme pour ne pas perdre le suivi des % exacts.
+ * Diagnostic (sans jamais divulguer les valeurs) : tokenEnv (tokens présents
+ * dans l'env), tokens (tokens acceptés par Discord), rawCount (max d'entrées
+ * brutes vues en un appel), attempts (host/version/statut/token par essai).
  */
 async function fetchGuildExperiments(fetchImpl, nameFor) {
   const attempts = [];
-  const tryChain = async (withAuth) => {
-    const urls = withAuth && TOKEN ? GUILD_ENDPOINTS_AUTH : GUILD_ENDPOINTS_ANON;
+  // hash -> { hash, id, revision, byBucket: Map(bucket -> [[a, b], ...]) }
+  const seen = new Map();
+  const note = (decoded) => {
+    if (!decoded) return;
+    let st = seen.get(decoded.hash);
+    if (!st) {
+      st = { hash: decoded.hash, id: decoded.id, revision: decoded.revision, byBucket: new Map() };
+      seen.set(decoded.hash, st);
+    }
+    if (String(decoded.id).indexOf('hash:') !== 0) st.id = decoded.id; // nom > hash brut
+    for (const item of decoded.intervals || []) {
+      const iv = st.byBucket.get(item.bucket) || [];
+      st.byBucket.set(item.bucket, iv.concat(item.iv || []));
+    }
+  };
+  const tryChain = async (token, idx) => {
+    const urls = token ? GUILD_ENDPOINTS_AUTH : GUILD_ENDPOINTS_ANON;
+    let maxRaw = 0;
     for (const url of urls) {
       const host = url.includes('canary') ? 'canary' : 'stable';
       const ver = (url.match(/\/v(\d+)\//) || [])[1] || '';
-      const authed = !!(withAuth && TOKEN);
+      const authed = !!token;
       try {
         const headers = { 'User-Agent': UA, Accept: '*/*' };
         if (authed) {
-          headers.Authorization = TOKEN;
+          headers.Authorization = token;
           headers['X-Discord-Locale'] = 'en-US';
           try {
             headers['X-Super-Properties'] = Buffer.from(
@@ -174,35 +206,62 @@ async function fetchGuildExperiments(fetchImpl, nameFor) {
           } catch (_) {}
         }
         const res = await fetchImpl(url, { headers, timeout: 25000 });
-        attempts.push({ host, v: ver, status: res.status, auth: authed });
+        attempts.push({ host, v: ver, status: res.status, auth: authed, token: idx });
         if (!res.ok) continue;
         const data = await res.json();
         const raw = (data && Array.isArray(data.guild_experiments) && data.guild_experiments) || [];
         if (!raw.length) continue;
+        maxRaw = Math.max(maxRaw, raw.length);
         const list = raw.map((t) => decodeGuildWire(t, nameFor)).filter((e) => e && e.treatments.length);
-        if (!list.length) continue;
-        return {
-          list,
-          source: host === 'canary' ? 'canary' : 'stable',
-          status: res.status,
-          rawCount: raw.length,
-          authSent: authed,
-          tokenEnv: !!TOKEN,
-        };
+        for (const e of list) note(e);
+        return { host, status: res.status, maxRaw, token: idx };
       } catch (_) {
-        attempts.push({ host, v: ver, status: 0, auth: authed });
+        attempts.push({ host, v: ver, status: 0, auth: !!token, token: idx });
       }
     }
     return null;
   };
-  let out = await tryChain(true);
-  if (!out && TOKEN) {
-    console.warn('SAMPLER_TOKEN refusé par tous les endpoints — nouvelle tentative anonyme');
-    out = await tryChain(false);
+  const ok = [];
+  for (let i = 0; i < TOKENS.length; i++) {
+    const r = await tryChain(TOKENS[i], i + 1);
+    if (r) ok.push(r);
   }
-  if (!out) return null;
-  out.attempts = attempts;
-  return out;
+  let anon = null;
+  if (!ok.length) anon = await tryChain(null, 0);
+  if (!ok.length && TOKENS.length) {
+    console.warn(TOKENS.length + ' token(s) refusé(s) par tous les endpoints — nouvelle tentative anonyme');
+  }
+  const list = [];
+  for (const st of seen.values()) {
+    const treatments = [...st.byBucket.entries()]
+      .map((pair) => ({
+        bucket: Number(pair[0]),
+        label: tLabel(pair[0]),
+        pct: rangesToPct(pair[1]),
+      }))
+      .filter((t) => Number.isFinite(t.bucket))
+      .sort((a, b) => a.bucket - b.bucket);
+    if (!treatments.length) continue;
+    list.push({
+      id: String(st.id),
+      hash: Number(st.hash),
+      revision: st.revision,
+      treatments,
+      fingerprint: treatments.map((t) => t.bucket + ':' + Number(t.pct).toFixed(1)).join('|'),
+    });
+  }
+  if (!list.length) return null;
+  const first = ok[0] || anon;
+  return {
+    list,
+    source: first && first.host === 'canary' ? 'canary' : 'stable',
+    status: first ? first.status : 0,
+    rawCount: Math.max(0, ...ok.concat(anon ? [anon] : []).map((r) => r.maxRaw || 0)),
+    authSent: ok.length > 0,
+    tokenEnv: TOKENS.length > 0,
+    tokens: ok.length,
+    attempts,
+  };
 }
 
 /** Changements de % guild vs snapshot précédent (deltas >= minDelta points).

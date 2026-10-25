@@ -70,6 +70,13 @@
       "fail": 4,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-25T02:36:17.403Z",
+      "ok": 495,
+      "fail": 5,
+      "hashes": 5,
+      "stopReason": null
     }
   ],
   "experiments": {
@@ -174,9 +181,21 @@
               "posMax": 9997
             }
           }
+        },
+        {
+          "total": 29,
+          "buckets": {
+            "1": {
+              "n": 29,
+              "posMin": 9535,
+              "posMax": 9967
+            }
+          }
         }
       ],
-      "announced": {},
+      "announced": {
+        "1": 100
+      },
       "missed": 0
     },
     "1144304849": {
@@ -278,6 +297,16 @@
               "n": 26,
               "posMin": 52,
               "posMax": 497
+            }
+          }
+        },
+        {
+          "total": 22,
+          "buckets": {
+            "1": {
+              "n": 22,
+              "posMin": 1,
+              "posMax": 493
             }
           }
         }
@@ -384,6 +413,16 @@
               "n": 496,
               "posMin": 19,
               "posMax": 9992
+            }
+          }
+        },
+        {
+          "total": 495,
+          "buckets": {
+            "1": {
+              "n": 495,
+              "posMin": 38,
+              "posMax": 9988
             }
           }
         }
@@ -494,6 +533,16 @@
               "posMax": 9996
             }
           }
+        },
+        {
+          "total": 495,
+          "buckets": {
+            "11": {
+              "n": 495,
+              "posMin": 1,
+              "posMax": 9990
+            }
+          }
         }
       ],
       "announced": {
@@ -602,6 +651,16 @@
               "posMax": 9991
             }
           }
+        },
+        {
+          "total": 495,
+          "buckets": {
+            "1": {
+              "n": 495,
+              "posMin": 5,
+              "posMax": 9974
+            }
+          }
         }
       ],
       "announced": {
@@ -610,14 +669,37 @@
       "missed": 0
     }
   },
-  "lastChanges": [],
-  "scrapedAt": "2026-10-25T02:27:19.622Z",
+  "lastChanges": [
+    {
+      "name": "hash:704914099",
+      "kind": "new",
+      "deltas": [
+        {
+          "bucket": 1,
+          "label": "Variant 1",
+          "from": 0,
+          "to": 100,
+          "delta": 100,
+          "ciPct": 0.8
+        }
+      ]
+    }
+  ],
+  "scrapedAt": "2026-10-25T02:36:17.529Z",
   "guild": {
-    "ts": "2026-10-25T02:27:19.107Z",
-    "source": "canary",
+    "ts": "2026-10-25T02:36:17.402Z",
+    "source": "stable",
     "auth": "token",
-    "raw": 5,
-    "count": 5,
+    "attempts": [
+      {
+        "host": "stable",
+        "v": "9",
+        "status": 200,
+        "auth": true
+      }
+    ],
+    "raw": 6,
+    "count": 6,
     "experiments": [
       {
         "id": "2022-07_voice_in_threads",
@@ -660,6 +742,10 @@
           {
             "bucket": -1,
             "pct": 100
+          },
+          {
+            "bucket": 1,
+            "pct": 100
           }
         ]
       },
@@ -670,6 +756,20 @@
           {
             "bucket": 1,
             "pct": 100
+          }
+        ]
+      },
+      {
+        "id": "2025-08_default_invite_expiration_guild",
+        "hash": 1508002362,
+        "treatments": [
+          {
+            "bucket": -1,
+            "pct": 5
+          },
+          {
+            "bucket": 2,
+            "pct": 95
           }
         ]
       }

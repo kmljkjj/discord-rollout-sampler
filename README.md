@@ -26,7 +26,7 @@ Le sampler lit aussi les **rollouts guild** (expériences de serveurs) : `GET /e
 Deux catégories cohabitent :
 
 - **user** : estimation par échantillonnage de fingerprints (invités anonymes — ~5 expériences visibles, celles que Discord assigne sans compte) ;
-- **guild** : % exacts lus dans le wire, deltas ≥ `SAMPLER_MIN_DELTA` annoncés. Anonymement, Discord n\u2019expose qu\u2019un petit sous-ensemble (~5) ; avec le secret `SAMPLER_TOKEN`, la liste complète (~500) est lue.
+- **guild** : % exacts lus dans le wire, deltas ≥ `SAMPLER_MIN_DELTA` annoncés. Anonymement, Discord n\u2019expose qu\u2019un petit sous-ensemble (~5) ; avec le secret `SAMPLER_TOKEN`, quelques expériences du contexte du compte s'ajoutent (vérifié : 5 → 6) — mais Discord ne publie **pas** la liste complète (~500) sur cette API, même authentifié. Les ~500 visibles ailleurs viennent de sources communautaires (gist/worker), hors périmètre de ce dépôt.
 
 Les % guild sont par nature identiques pour tout lecteur de cette API : c'est une donnée publiée par Discord elle-même, pas une copie de qui que ce soit.
 
@@ -39,7 +39,7 @@ Les % guild sont par nature identiques pour tout lecteur de cette API : c'est un
 
 Aucun token Discord n'est nécessaire (le sampling est anonyme).
 
-**Optionnel** : pour lire la liste guild *complète* (~500 expériences au lieu du sous-ensemble anonyme), ajouter le secret `SAMPLER_TOKEN` (un token utilisateur, comme ceux du dépôt principal). Sans ce secret, le sampler reste 100 % anonyme.
+**Optionnel** : le secret `SAMPLER_TOKEN` (un token utilisateur, comme ceux du dépôt principal) enrichit la liste guild de quelques expériences du contexte du compte — vérifié en run réel : 5 → 6, dont un rollout partiel à 95 %. Sans ce secret, le sampler reste 100 % anonyme. NB : la liste « complète » (~500) des trackers communautaires ne vient **pas** de cette API — le dépôt principal la lit dans un gist/worker communautaire.
 
 ## Workflows
 
@@ -78,4 +78,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - Extension **guild experiments** — % exacts lus dans le wire Discord (`src/guild.js`), en plus des % user estimés par échantillonnage.
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.
 
-- 02:11 : secret `SAMPLER_TOKEN` ajouté ; 02:27 le diagnostic tranchait : `auth: token`, en-tête envoyé, HTTP 200 — mais `raw: 5`. Ce n'est ni le secret ni l'envoi : c'est l'endpoint **v10** qui ne renvoie que le sous-ensemble, même authentifié. Correctif : avec token, le sampler interroge d'abord les endpoints **v9** du dépôt principal (stable puis canary), avec `X-Super-Properties` ; v10 reste en secours, et chaque tentative (host/version/statut/auth) est archivée dans l'état.
+- 02:11 → 02:36 : `SAMPLER_TOKEN` ajouté et diagnostiqué en runs réels (l'état archive `auth`, `raw` et chaque tentative host/version/statut). Verdict : le secret arrive bien (200 auth) ; v10 renvoie 5 guild experiments même authentifié, v9 en renvoie 6 — dont `2025-08_default_invite_expiration_guild` (Variant 2 à 95 %), invisible en anonyme. Conclusion vérifiée dans le dépôt principal : ses ~499 % user viennent du gist communautaire (agnonotdev) et du worker `experiments.dscrd.workers.dev` — PAS de l'API Discord seule. Le sampler mesure donc **tout ce que Discord nous montre** : c'est la limite de la mesure 100 % indépendante, pas un bug.

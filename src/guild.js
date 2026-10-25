@@ -22,13 +22,22 @@ const TOKEN = (process.env.SAMPLER_TOKEN || '').trim() || null;
 const UA =
   process.env.SAMPLER_UA ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
-const GUILD_ENDPOINTS = [
+const GUILD_ENDPOINTS_ANON = [
   process.env.SAMPLER_GUILD_ENDPOINT_CANARY ||
     'https://canary.discord.com/api/v10/experiments?with_guild_experiments=true',
   process.env.SAMPLER_GUILD_ENDPOINT_STABLE ||
     'https://discord.com/api/v10/experiments?with_guild_experiments=true',
   'https://discord.com/api/v9/experiments?with_guild_experiments=true',
 ].filter(Boolean);
+// Avec token : endpoints v9 du dépôt principal d'abord (stable puis canary).
+// Constat run 02:27 : v10 renvoie 200 mais seulement le sous-ensemble anonyme
+// (raw=5) MÊME avec un Authorization valide ; v9+token est la combinaison
+// qui expose la liste complète des guild experiments. v10 reste en secours.
+const GUILD_ENDPOINTS_AUTH = [
+  'https://discord.com/api/v9/experiments?with_guild_experiments=true',
+  'https://canary.discord.com/api/v9/experiments?with_guild_experiments=true',
+  ...GUILD_ENDPOINTS_ANON,
+];
 
 function tLabel(bucket) {
   const b = Number(bucket);
@@ -138,17 +147,34 @@ function decodeGuildWire(tuple, nameFor) {
 async function fetchGuildExperiments(fetchImpl, nameFor) {
   const attempts = [];
   const tryChain = async (withAuth) => {
-    for (const url of GUILD_ENDPOINTS) {
+    const urls = withAuth && TOKEN ? GUILD_ENDPOINTS_AUTH : GUILD_ENDPOINTS_ANON;
+    for (const url of urls) {
       const host = url.includes('canary') ? 'canary' : 'stable';
+      const ver = (url.match(/\/v(\d+)\//) || [])[1] || '';
       const authed = !!(withAuth && TOKEN);
       try {
         const headers = { 'User-Agent': UA, Accept: '*/*' };
         if (authed) {
           headers.Authorization = TOKEN;
           headers['X-Discord-Locale'] = 'en-US';
+          try {
+            headers['X-Super-Properties'] = Buffer.from(
+              JSON.stringify({
+                os: 'Windows',
+                browser: 'Chrome',
+                device: '',
+                system_locale: 'en-US',
+                browser_user_agent: UA,
+                browser_version: '131.0.0.0',
+                os_version: '10',
+                release_channel: 'stable',
+                client_build_number: 360000,
+              })
+            ).toString('base64');
+          } catch (_) {}
         }
         const res = await fetchImpl(url, { headers, timeout: 25000 });
-        attempts.push({ host, status: res.status, auth: authed });
+        attempts.push({ host, v: ver, status: res.status, auth: authed });
         if (!res.ok) continue;
         const data = await res.json();
         const raw = (data && Array.isArray(data.guild_experiments) && data.guild_experiments) || [];
@@ -164,7 +190,7 @@ async function fetchGuildExperiments(fetchImpl, nameFor) {
           tokenEnv: !!TOKEN,
         };
       } catch (_) {
-        attempts.push({ host, status: 0, auth: authed });
+        attempts.push({ host, v: ver, status: 0, auth: authed });
       }
     }
     return null;

@@ -376,6 +376,7 @@ async function main(opts = {}) {
         ts: nowIso(),
         source: guildRes.source,
         auth: guildAuth,
+        attempts: guildRes.attempts || [],
         raw: guildRes.rawCount,
         count: guildRes.list.length,
         experiments: guildRes.list.map((e) => ({

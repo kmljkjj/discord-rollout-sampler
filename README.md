@@ -32,7 +32,7 @@ Les % guild sont par nature identiques pour tout lecteur de cette API : c'est un
 
 ## Profils client & X-Fingerprint (user)
 
-Recherche vérifiée (doc discord-userdoccers + dépôt principal) : pour les **user experiments**, l'API `/experiments` ne renvoie que le **bucket assigné** (hash, bucket, population…) — jamais les ranges de rollout. Il n'existe donc **pas de % exact user dans l'API Discord** ; les ~500 % affichés par les trackers communautaires viennent du gist/worker, pas de l'API. La seule voie 100 % API = l'estimation par échantillonnage.
+Recherche vérifiée (doc discord-userdoccers + dépôt principal) : pour les **user experiments**, l'API `/experiments` ne renvoie que le **bucket assigné** (hash, bucket, population…) — jamais les ranges de rollout. Il n'existe donc **pas de % exact user dans l'API Discord** ; les ~500 % affichés par les trackers communautaires viennent du gist/worker, pas de l'API. La seule voie 100 % API = l'estimation par échantillonnage — et c'est **exactement ce que font les trackers** (vérifié dans leur code, cf. section suivante).
 
 Ce que l'API montre dépend aussi du **contexte client** : Discord filtre les expériences par plateforme, canal de release et build. Un invité web « nu » n'expose que ~5 expériences. Le sampler élargit donc la population sondée, toujours sans biais :
 
@@ -40,6 +40,22 @@ Ce que l'API montre dépend aussi du **contexte client** : Discord filtre les ex
 - **Re-test `X-Fingerprint`** (`SAMPLER_FP_REUSE`, défaut 1) : la doc indique que renvoyer le fingerprint du premier appel permet d'accéder aux portions **API-locked** des expériences. Chaque fingerprint sondé est ré-interrogé une 2e fois ; seuls les hashes absents de la 1re réponse sont comptés — pas de double comptage. Le rapport LAB affiche « API-locked (X-Fingerprint) : +N obs. ».
 
 Env associées : `SAMPLER_PROFILES` (JSON, ex. `["web-canary","android"]` — sous-ensemble des profils), `SAMPLER_BUILD` (client_build_number web, ex. 451408), `SAMPLER_FP_REUSE` (1/0).
+
+## Reconstruction de ranges — la méthode des trackers, vérifiée dans leur code
+
+Comment Wumpus Central / Discord Experiment Hub obtiennent leurs « vrais » % user — vérifié dans le code de [discordexperimenthub/experimentAPI](https://github.com/discordexperimenthub/experimentAPI) (co-créé par Discord Experiment Hub **et Wumpus Central**) :
+
+1. `run.js` lance 10 processus `rollout-calculation.js` en parallèle, chacun fait **10 000 requêtes anonymes** à `/api/v10/experiments` (sans token, 700 ms d'intervalle) → ~100 000 fingerprints sondés par mise à jour.
+2. Chaque assignment contient `hash_result` : la **position du fingerprint** dans l'échelle de rollout 0-9999 (la même donnée que notre `posMin`/`posMax`).
+3. Positions regroupées par (hash, bucket) → min/max → range (arrondi à 500 dans la version publique 2023 ; le worker/gist actuel publie des ranges multi-segments fins).
+
+**Conclusion : leurs % user ne sont pas « reçus » de Discord.** Ils sont reconstruits par échantillonnage massif de la même API publique anonyme — aucune donnée privilégiée n'existe (la doc userdoccers confirme que l'API ne publie pas de ranges user). Les noms, eux, viennent du build du client (leur `discrapper-canary` ↔ notre `known_experiment_ids.json` du dépôt principal).
+
+Le sampler implémente la même reconstruction, intégrée au pipeline :
+
+- les positions `hash_result` de chaque bucket sont collectées à chaque run, compressées en **segments** (`computeSegments`, tolérance de fusion 150) puis unionnées sur la fenêtre (`mergeWindow`) ;
+- le LAB affiche les ranges reconstruits : « Variant 1 6% [9510-9999] » — la résolution s'affine à mesure que la fenêtre cumule des échantillons (~500/run → ~6 000 sur la fenêtre de 12 runs ; les trackers font ~100 000 par mise à jour) ;
+- le % Wilson reste la valeur publiée de référence (non biaisée même si des trous subsistent) ; `segPct` sert de contre-vérification croisée.
 
 ## Setup webhook
 
@@ -97,3 +113,5 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 
 - **Profils client + X-Fingerprint** : le sampling teste désormais 5 contextes client (web stable/canary/ptb, Android, iOS) en round-robin via `X-Super-Properties`, et ré-interroge chaque fingerprint (`X-Fingerprint`) pour révéler les hashes API-locked — objectif : dépasser les ~5 user experiments visibles avec un profil web seul.
 - 03:01 → **run de validation** (#17) : 5 → **7 expériences suivies**. Deux nouvelles découvertes (`hash:2582794089`, `hash:3948141150`, absentes de la liste des noms connus) ne sont visibles **que sur les profils web** : 123 observations = web-stable 42 + web-canary 41 + web-ptb 40, **zéro** sur Android/iOS — preuve directe du filtrage par contexte client. Re-test X-Fingerprint : **+23 observations API-locked**. Trade-off : 204 fingerprints/run (vs ~496 avant) car 2 requêtes par fingerprint → arrêt propre sur budget (`SAMPLER_MAX_MS`) ; désactivable via `SAMPLER_FP_REUSE`.
+
+- **Reconstruction de ranges** (méthode des trackers, vérifiée) : le sampler collecte désormais les positions `hash_result` par bucket et reconstruit les ranges en segments cumulés sur la fenêtre — les % user « exacts » des trackers sont eux-mêmes estimés ainsi depuis l'API publique, rien ne nous est inaccessible.

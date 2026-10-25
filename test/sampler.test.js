@@ -56,6 +56,7 @@ test('sampleLoop : agrège les fingerprints sondés', async () => {
   assert.equal(h111.buckets.get(2).n, 3);
   const h222 = r.byHash.get(222);
   assert.equal(h222.total, 3);
+  assert.equal(h111.buckets.get(0).positions.length, 3); // positions hash_result collectées
 });
 
 test('sampleLoop : un 429 compte comme échec, les suivants passent', async () => {
@@ -89,16 +90,16 @@ test('toRunRecord : Maps → objets sérialisables', () => {
   const run = {
     total: 2,
     buckets: new Map([
-      [0, { n: 1, posMin: 10, posMax: 20 }],
-      [1, { n: 1, posMin: 30, posMax: 40 }],
+      [0, { n: 1, posMin: 10, posMax: 20, positions: [10, 20] }],
+      [1, { n: 1, posMin: 30, posMax: 40, positions: [30, 40] }],
     ]),
   };
   const rec = sampler.toRunRecord(run);
   assert.deepEqual(rec, {
     total: 2,
     buckets: {
-      0: { n: 1, posMin: 10, posMax: 20 },
-      1: { n: 1, posMin: 30, posMax: 40 },
+      0: { n: 1, posMin: 10, posMax: 20, segments: [[10, 20]] },
+      1: { n: 1, posMin: 30, posMax: 40, segments: [[30, 40]] },
     },
   });
 });

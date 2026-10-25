@@ -9,6 +9,9 @@
  *  - mergeWindow    : fusionne les k derniers runs d'une expérience (fenêtre)
  *  - estimatePcts   : % par bucket + marge d'erreur, ou [] si données insuffisantes
  *  - classifyChange : deltas significatifs entre % annoncés et % mesurés
+ *  - computeSegments : reconstruction de ranges depuis les positions échantillonnées
+ *  - mergeSegments  : union de segments de plusieurs runs (fusion si écart faible)
+ *  - segmentsPct     : % de l'échelle de rollout couvert par des segments
  *
  * Aucune source de données externe : tout part d'échantillons que NOUS
  * collectons nous-mêmes sur l'API Discord (cf. src/sampler.js).
@@ -69,9 +72,82 @@ function aggregateRun(assignments) {
 }
 
 /**
+ * Reconstruction de ranges (méthode des trackers, vérifiée dans leur code) :
+ * chaque assignment porte hash_result = la position du fingerprint dans
+ * l'échelle de rollout 0-9999. En regroupant les positions observées d'un
+ * bucket puis en fusionnant les positions voisines (écart <= gap), on
+ * reconstitue les segments de rollout — exactement ce que font les trackers
+ * communautaires (~100k fingerprints anonymes), mais ici sur nos propres
+ * échantillons.
+ */
+function computeSegments(positions, gap = 150) {
+  const pts = (positions || [])
+    .filter((p) => Number.isFinite(p))
+    .map(Number)
+    .sort((a, b) => a - b);
+  const segs = [];
+  let s = null;
+  let e = null;
+  for (const p of pts) {
+    if (s === null) {
+      s = p;
+      e = p;
+      continue;
+    }
+    if (p - e <= gap) {
+      e = p;
+      continue;
+    }
+    segs.push([s, e]);
+    s = p;
+    e = p;
+  }
+  if (s !== null) segs.push([s, e]);
+  return segs;
+}
+
+/** Union de listes de segments (multi-runs) : fusion si l'écart <= gap. */
+function mergeSegments(lists, gap = 150) {
+  const pts = [];
+  for (const segs of lists || []) {
+    if (!Array.isArray(segs)) continue;
+    for (const sg of segs) {
+      if (!Array.isArray(sg) || sg.length < 2) continue;
+      const s = Number(sg[0]);
+      const e = Number(sg[1]);
+      if (!Number.isFinite(s) || !Number.isFinite(e)) continue;
+      pts.push([s, e]);
+    }
+  }
+  pts.sort((a, b) => a[0] - b[0] || a[1] - b[1]);
+  const out = [];
+  for (const [s, e] of pts) {
+    const last = out[out.length - 1];
+    if (last && s - last[1] <= gap) {
+      last[1] = Math.max(last[1], e);
+      continue;
+    }
+    out.push([s, e]);
+  }
+  return out;
+}
+
+/** % de l'échelle (défaut 10000) couvert par des segments [[s, e], ...]. */
+function segmentsPct(segments, scale = DEFAULT_SCALE) {
+  let total = 0;
+  for (const sg of segments || []) {
+    if (!Array.isArray(sg) || sg.length < 2) continue;
+    total += Math.max(0, Number(sg[1]) - Number(sg[0]) + 1);
+  }
+  return Math.round((total / scale) * 1000) / 10;
+}
+
+/**
  * Fusionne les k derniers runs (fenêtre glissante) d'une expérience.
- * runRecords : [{ total, buckets: { bucket: { n, posMin, posMax } } }]
- * Retourne { total, buckets: [{ bucket, n, posMin, posMax }] } trié par bucket.
+ * runRecords : [{ total, buckets: { bucket: { n, posMin, posMax, segments } } }]
+ * Les segments de ranges sont unionnés sur la fenêtre (records anciens sans
+ * segments contribuent pour rien). Retourne { total, buckets: [{ bucket, n,
+ * posMin, posMax, segments }] } trié par bucket.
  */
 function mergeWindow(runRecords, k = 3) {
   const use = (runRecords || []).slice(-Math.max(1, k));
@@ -81,14 +157,24 @@ function mergeWindow(runRecords, k = 3) {
     for (const [bucketStr, b] of Object.entries((r && r.buckets) || {})) {
       const bucket = Number(bucketStr);
       if (!Number.isFinite(bucket)) continue;
-      if (!acc.has(bucket)) acc.set(bucket, { bucket, n: 0, posMin: null, posMax: null });
+      if (!acc.has(bucket)) acc.set(bucket, { bucket, n: 0, posMin: null, posMax: null, segLists: [] });
       const t = acc.get(bucket);
       t.n += Number(b.n) || 0;
       if (b.posMin != null) t.posMin = t.posMin == null ? b.posMin : Math.min(t.posMin, b.posMin);
       if (b.posMax != null) t.posMax = t.posMax == null ? b.posMax : Math.max(t.posMax, b.posMax);
+      if (Array.isArray(b.segments)) t.segLists.push(b.segments);
     }
   }
-  return { total, buckets: [...acc.values()].sort((a, b) => a.bucket - b.bucket) };
+  const buckets = [...acc.values()]
+    .sort((a, b) => a.bucket - b.bucket)
+    .map((t) => ({
+      bucket: t.bucket,
+      n: t.n,
+      posMin: t.posMin,
+      posMax: t.posMax,
+      segments: mergeSegments(t.segLists),
+    }));
+  return { total, buckets };
 }
 
 /**
@@ -104,7 +190,18 @@ function estimatePcts(window, minN = 500) {
     const ci = wilsonInterval(b.n, window.total);
     const pct = Math.round(ci.mid * 1000) / 10;
     const ciPct = Math.round(((ci.high - ci.low) / 2) * 1000) / 10;
-    out.push({ bucket: b.bucket, label: tLabel(b.bucket), pct, ciLow: ci.low, ciHigh: ci.high, ciPct, n: b.n });
+    const segments = Array.isArray(b.segments) ? b.segments : [];
+    out.push({
+      bucket: b.bucket,
+      label: tLabel(b.bucket),
+      pct,
+      ciLow: ci.low,
+      ciHigh: ci.high,
+      ciPct,
+      n: b.n,
+      segments,
+      segPct: segments.length ? segmentsPct(segments) : null,
+    });
   }
   return out;
 }
@@ -168,6 +265,9 @@ module.exports = {
   tLabel,
   wilsonInterval,
   aggregateRun,
+  computeSegments,
+  mergeSegments,
+  segmentsPct,
   mergeWindow,
   estimatePcts,
   classifyChange,

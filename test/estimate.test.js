@@ -169,3 +169,71 @@ test('nameFor : map connue sinon hash:<hash>', () => {
   assert.equal(est.nameFor('2026_abc', names), 'Test Experiment');
   assert.equal(est.nameFor(999, names), 'hash:999');
 });
+
+// ---- computeSegments / mergeSegments / segmentsPct (reconstruction de ranges) ----
+
+test('computeSegments : positions triées -> segments fusionnés (tolérance 150)', () => {
+  assert.deepEqual(est.computeSegments([200, 0, 5, 10, 5000, 205], 150), [
+    [0, 10],
+    [200, 205],
+    [5000, 5000],
+  ]);
+  assert.deepEqual(est.computeSegments([], 150), []);
+  assert.deepEqual(est.computeSegments([42], 150), [[42, 42]]);
+  // écart > tolérance -> deux segments distincts
+  assert.deepEqual(est.computeSegments([0, 10, 200], 150), [
+    [0, 10],
+    [200, 200],
+  ]);
+});
+
+test('mergeSegments : union de segments multi-runs avec fusion', () => {
+  const merged = est.mergeSegments([
+    [[0, 100], [400, 500]],
+    [[150, 200]],
+  ], 150);
+  assert.deepEqual(merged, [
+    [0, 200],
+    [400, 500],
+  ]);
+  assert.deepEqual(est.mergeSegments([], 150), []);
+});
+
+test('segmentsPct : % couvert par les segments (échelle 10000)', () => {
+  assert.equal(est.segmentsPct([[0, 4999]]), 50);
+  assert.equal(est.segmentsPct([[0, 999], [8000, 8999]]), 20);
+  assert.equal(est.segmentsPct([]), 0);
+});
+
+test('mergeWindow : union des segments de ranges sur la fenêtre', () => {
+  const runRecords = [
+    { total: 10, buckets: { 1: { n: 5, posMin: 100, posMax: 400, segments: [[100, 400]] } } },
+    { total: 10, buckets: { 1: { n: 5, posMin: 350, posMax: 700, segments: [[350, 700]] } } },
+    { total: 10, buckets: { 1: { n: 5, posMin: 900, posMax: 950, segments: [[900, 950]] } } },
+  ];
+  const w = est.mergeWindow(runRecords, 3);
+  const b1 = w.buckets[0];
+  assert.equal(b1.bucket, 1);
+  assert.equal(b1.n, 15);
+  assert.deepEqual(b1.segments, [
+    [100, 700],
+    [900, 950],
+  ]);
+});
+
+test('mergeWindow : records sans segments (ancien état) -> segments=[]', () => {
+  const w = est.mergeWindow([{ total: 5, buckets: { 0: { n: 5, posMin: 1, posMax: 2 } } }], 3);
+  assert.deepEqual(w.buckets[0].segments, []);
+});
+
+test('estimatePcts : inclut segments + segPct reconstruits', () => {
+  const window = {
+    total: 20,
+    buckets: [{ bucket: 1, n: 3, segments: [[8000, 8999]] }],
+  };
+  const pcts = est.estimatePcts(window, 10);
+  assert.equal(pcts[0].bucket, 1);
+  assert.equal(pcts[0].pct, 15);
+  assert.deepEqual(pcts[0].segments, [[8000, 8999]]);
+  assert.equal(pcts[0].segPct, 10);
+});

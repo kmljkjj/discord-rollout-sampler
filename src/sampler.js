@@ -205,10 +205,11 @@ async function sampleLoop(opts) {
       if (!byHash.has(hash)) byHash.set(hash, { total: 0, buckets: new Map() });
       const h = byHash.get(hash);
       h.total++;
-      if (!h.buckets.has(bucket)) h.buckets.set(bucket, { n: 0, posMin: null, posMax: null });
+      if (!h.buckets.has(bucket)) h.buckets.set(bucket, { n: 0, posMin: null, posMax: null, positions: [] });
       const b = h.buckets.get(bucket);
       b.n++;
       if (Number.isFinite(pos)) {
+        b.positions.push(pos);
         b.posMin = b.posMin == null ? pos : Math.min(b.posMin, pos);
         b.posMax = b.posMax == null ? pos : Math.max(b.posMax, pos);
       }
@@ -384,7 +385,12 @@ function saveState(state) {
 function toRunRecord(run) {
   const buckets = {};
   for (const [bucket, b] of run.buckets) {
-    buckets[String(bucket)] = { n: b.n, posMin: b.posMin, posMax: b.posMax };
+    buckets[String(bucket)] = {
+      n: b.n,
+      posMin: b.posMin,
+      posMax: b.posMax,
+      segments: est.computeSegments(b.positions || []),
+    };
   }
   return { total: run.total, buckets };
 }
@@ -580,7 +586,15 @@ async function main(opts = {}) {
     measured++;
     measuredExperiments.push({
       name: est.nameFor(key, names),
-      summary: pcts.map((t) => t.label + ' ' + t.pct + '%').join(', '),
+      summary: pcts
+        .map((t) => {
+          let line = t.label + ' ' + t.pct + '%';
+          if (Array.isArray(t.segments) && t.segments.length) {
+            line += ' [' + t.segments.map((g) => g[0] + '-' + g[1]).join(', ') + ']';
+          }
+          return line;
+        })
+        .join(', '),
     });
     if (isFirst) continue;
     const hadAnnounced = st.announced && Object.keys(st.announced).length > 0;

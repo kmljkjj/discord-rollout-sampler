@@ -26,7 +26,9 @@
  *   SAMPLER_DELAY_MS (250), SAMPLER_MAX_MS (240000), SAMPLER_WINDOW_RUNS (3),
  *   SAMPLER_MIN_N (500), SAMPLER_MIN_DELTA (2), SAMPLER_LAB (1),
  *   SAMPLER_STATE, SAMPLER_NAMES_URL, SAMPLER_UA, SAMPLER_PROFILES,
- *   SAMPLER_BUILD (451408), SAMPLER_FP_REUSE (1)
+ *   SAMPLER_BUILD (451408), SAMPLER_FP_REUSE (1),
+ *   SAMPLER_NAMES_TTL_H (12), SAMPLER_NAMES_MAX_MS (300000),
+ *   SAMPLER_NAMES_CHANNELS ('canary,stable,ptb'), SAMPLER_NAMES_URL (fallback liste)
  */
 
 const fs = require('fs');
@@ -35,13 +37,11 @@ const crypto = require('crypto');
 const { murmur3 } = require('./murmur3');
 const est = require('./estimate');
 const guild = require('./guild');
+const namesMod = require('./names');
 
 // ---- Config ----
 const DATA_DIR = path.join(__dirname, '..', 'data');
 const STATE_FILE = process.env.SAMPLER_STATE || path.join(DATA_DIR, 'sampler_state.json');
-const NAMES_URL =
-  process.env.SAMPLER_NAMES_URL ||
-  'https://raw.githubusercontent.com/kmljkjj/discord-canary-scraper/main/data/known_experiment_ids.json';
 const WEBHOOK = process.env.SAMPLER_WEBHOOK_URL || null;
 const TARGET = clampInt(process.env.SAMPLER_TARGET, 1200, 200, 4000);
 const CONC = clampInt(process.env.SAMPLER_CONCURRENCY, 3, 1, 6);
@@ -330,39 +330,6 @@ async function sampleLoop(opts) {
   return { byHash, ok, fail, stopReason, profileOk, followupNew, followupFail };
 }
 
-// ---- Noms d'expériences (optionnels) ----
-
-async function loadNames(fetchImpl) {
-  try {
-    const res = await fetchImpl(NAMES_URL, {
-      headers: { Accept: 'application/json' },
-      timeout: 20000,
-    });
-    if (!res.ok) return {};
-    const data = await res.json();
-    const list = Array.isArray(data)
-      ? data
-      : data.experiments || data.ids || (typeof data === 'object' ? Object.keys(data) : []);
-    const map = {};
-    let n = 0;
-    for (const item of list) {
-      const id =
-        typeof item === 'string'
-          ? item
-          : String((item && (item.id || item.name)) || '');
-      const clean = id && id.trim();
-      if (!clean || clean.startsWith('hash:')) continue;
-      map[String(murmur3(clean))] = clean;
-      n++;
-    }
-    console.log('Noms chargés:', n);
-    return map;
-  } catch (e) {
-    console.warn('Noms indisponibles (hash:… seront utilisés):', e.message);
-    return {};
-  }
-}
-
 // ---- État ----
 
 function loadState() {
@@ -425,6 +392,7 @@ function labReportEmbed(s) {
       (s.guild && s.guild.source ? ' · ' + s.guild.source : '') +
       (s.guild && s.guild.auth ? ' · ' + s.guild.auth : '') +
       (s.guild && s.guildChanges != null ? ' · Δ: ' + s.guildChanges : ''),
+    '• Noms : **' + (s.names || 'indisponibles') + '**',
     '• Source : **API Discord uniquement** — aucune donnée communautaire',
   ];
   for (const e of (s.experiments || []).slice(0, 12)) {
@@ -465,8 +433,22 @@ async function main(opts = {}) {
   console.log('Cible:', TARGET, 'fingerprints · concurrence:', CONC, '· webhook:', WEBHOOK ? 'configuré' : 'ABSENT');
   console.log("Source : API Discord uniquement — aucune donnée communautaire, c'est NOTRE mesure.");
 
-  const names = await loadNames(fetchImpl);
   const state = loadState();
+  let names = {};
+  let namesLab = 'indisponibles';
+  try {
+    const namesRes = await namesMod.loadNames({
+      fetchImpl,
+      state,
+      log: (m) => console.log(m),
+    });
+    names = namesRes.map;
+    namesLab = namesRes.labLine;
+  } catch (e) {
+    console.warn('Noms indisponibles (hash:… seront utilisés):', e.message);
+  }
+  namesLab = namesLab + ' · sans nom: ' + Object.keys(state.experiments || {}).filter((k) => !names[k]).length;
+  console.log('Noms :', namesLab);
   const isFirst = !(state.experiments && Object.keys(state.experiments).length);
 
   const t0 = Date.now();
@@ -640,6 +622,7 @@ async function main(opts = {}) {
         experiments: measuredExperiments,
         guild: guildInfo,
         guildChanges: guildIsFirst ? 0 : guildChanges.length,
+        names: namesLab,
       })
     );
   }
@@ -693,7 +676,6 @@ module.exports = {
   buildChangeEmbeds,
   labReportEmbed,
   postWebhook,
-  loadNames,
   loadState,
   saveState,
   toRunRecord,

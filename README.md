@@ -17,7 +17,7 @@ Les pourcentages user étaient lus dans le gist communautaire (également collec
 ## Sources de données
 
 - **API Discord uniquement** (canary → stable en fallback). Aucun gist communautaire, aucun worker tiers, aucune donnée Wumpus Central.
-- Les noms d'expériences (optionnels) proviennent de `data/known_experiment_ids.json` — **copie embarquée dans ce dépôt** de nos propres données scrapées depuis le build public du client Discord (hashées via murmur3). Le dépôt principal étant privé, son URL raw est inaccessible : le sampler charge donc cette copie locale, publique. Pour rafraîchir les noms, mettre à jour ce fichier depuis `discord-canary-scraper`. Les expériences absentes de cette liste s'affichent sous la forme `hash:NNNN`.
+- **Noms des expériences** : recherche **autonome** (`src/names.js`) — le sampler scanne lui-même les builds publics du client (canary/ptb/stable : `/app` → assets JS → chunks webpack) et en extrait les ids d'expériences ; map hash→nom par murmur3. Cache par canal 12 h dans l'état, ids conservés 30 jours ; fallback : `data/known_experiment_ids.json` (copie embarquée, mise à jour depuis `discord-canary-scraper`). Les expériences absentes s'affichent sous la forme `hash:NNNN`. Zéro source communautaire.
 
 ## Guild experiments (exact)
 
@@ -59,7 +59,7 @@ Le sampler implémente la même reconstruction, intégrée au pipeline :
 
 ## Nommage des hash - pourquoi certains restent anonymes
 
-L'API `/experiments` ne renvoie **que le hash** : `hash = murmur3(experiment_id)` (seed 0). Le nom n'est jamais transmis ; pour l'afficher, le sampler calcule le murmur3 de chaque id connu (`data/known_experiment_ids.json`, ids scrapés du build public du client par le dépôt principal) et matche les hash. C'est le mécanisme inverse du dépôt principal, et celui de tous les trackers.
+L'API `/experiments` ne renvoie **que le hash** : `hash = murmur3(experiment_id)` (seed 0). Le nom n'est jamais transmis ; pour l'afficher, le sampler scanne lui-même les builds publics (canary/ptb/stable : `/app` → assets JS → chunks webpack, cf. `src/names.js`) pour collecter les ids, puis matche leur murmur3 avec les hash observés — cache par canal 12 h dans l'état, ids gardés 30 jours, fallback sur `data/known_experiment_ids.json`. Même méthode que les trackers (scrape du build client), mais 100 % autonome.
 
 **Diagnostic du 2026-10-25** : sur les 7 expériences suivies, 2 sont nommées ; les 5 autres n'apparaissent dans **aucune** liste publique de noms - vérifié en diagnostic uniquement (aucune donnée consommée par le sampler) :
 
@@ -68,7 +68,7 @@ L'API `/experiments` ne renvoie **que le hash** : `hash = murmur3(experiment_id)
 - API advaith (guild, nommée) - aucun des 5 ;
 - notre propre scrape du build canary 650180 (547 ids) - aucun des 5.
 
-Conclusion : ces expériences n'ont **pas de code client** dans le build public (serveur seul, ou id jamais embarquée dans le JS). Personne ne peut les nommer - les trackers ont exactement la même limite, leur nommage vient aussi du scrape du client. `hash:NNNN` est donc l'affichage honnête ; le nom apparaîtra si Discord livre un jour le code correspondant (rafraîchissement de `known_experiment_ids.json` depuis le dépôt principal).
+Conclusion : ces expériences n'ont **pas de code client** dans le build public (serveur seul, ou id jamais embarquée dans le JS). Personne ne peut les nommer - les trackers ont exactement la même limite, leur nommage vient aussi du scrape du client. `hash:NNNN` est donc l'affichage honnête ; le nom apparaîtra si Discord livre un jour le code correspondant (le scan autonome des builds, `src/names.js` toutes les 12 h, détectera le code et nommera le hash automatiquement).
 
 ## Setup webhook
 
@@ -104,7 +104,10 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 | SAMPLER_MIN_DELTA | 2 | delta min. (points) pour annoncer |
 | SAMPLER_LAB | 1 | rapport de run à chaque passage |
 | SAMPLER_REMOVED_AFTER | 6 | runs d'absence avant purge d'une expérience |
-| SAMPLER_NAMES_URL | (dépôt principal) | liste d'IDs pour nommer les hash |
+| SAMPLER_NAMES_URL | (copie du dépôt) | liste d'IDs fallback pour nommer les hash |
+| SAMPLER_NAMES_TTL_H | 12 | TTL du scan des builds (par canal) |
+| SAMPLER_NAMES_MAX_MS | 300000 | budget temps du scan des builds |
+| SAMPLER_NAMES_CHANNELS | canary,stable,ptb | canaux scannés pour les noms |
 | SAMPLER_PROFILES | (tous) | sous-ensemble de profils client (JSON) |
 | SAMPLER_BUILD | 451408 | client_build_number des super-props web |
 | SAMPLER_FP_REUSE | 1 | re-tester chaque fingerprint avec X-Fingerprint |
@@ -129,3 +132,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 
 - **Reconstruction de ranges** (méthode des trackers, vérifiée) : le sampler collecte désormais les positions `hash_result` par bucket et reconstruit les ranges en segments cumulés sur la fenêtre — les % user « exacts » des trackers sont eux-mêmes estimés ainsi depuis l'API publique, rien ne nous est inaccessible.
 - **Nommage** (2026-10-25) : pourquoi des `hash:NNNN` ? L'API ne renvoie que le hash (= murmur3 du nom) ; les 5 hash non nommés du run courant n'existent dans aucune liste publique (gist, Wumpus, advaith, notre scrape 547 ids) - expériences sans code client, non nommables par quiconque, trackers inclus. Cf. section "Nommage des hash".
+- **Recherche de noms autonome** (2026-10-25) : `src/names.js` — le sampler scanne lui-même les builds publics (canary/ptb/stable : `/app` → assets → chunks webpack) pour nommer les hash ; cache par canal 12 h dans l'état (`state.names`), ids gardés 30 jours, fallback liste du dépôt. Zéro source communautaire.

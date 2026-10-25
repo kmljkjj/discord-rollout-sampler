@@ -64,7 +64,7 @@ test('sampleLoop : un 429 compte comme échec, les suivants passent', async () =
     calls++;
     return calls === 1 ? rateLimitedResponse() : okResponse(ASSIGNMENTS);
   };
-  const r = await sampler.sampleLoop({ ...BASE_OPTS, fetchImpl, target: 3, now: () => 0 });
+  const r = await sampler.sampleLoop({ ...BASE_OPTS, fetchImpl, target: 3, now: () => 0, fpReuse: false });
   assert.equal(calls, 3);
   assert.equal(r.ok, 2);
   assert.equal(r.fail, 1);
@@ -176,4 +176,55 @@ test('labReportEmbed : liste les expériences mesurées avec nom et %', () => {
   });
   assert.ok(e.description.includes('2023-09_iar_user_reporting : Variant 1 100%'));
   assert.ok(e.description.includes('hash:704914099 : Variant 1 6%'));
+});
+
+// ---- Profils client & X-Fingerprint ----
+
+function rawResponse(payload) {
+  return {
+    ok: true,
+    status: 200,
+    headers: { get: () => null },
+    json: async () => payload,
+    text: async () => '',
+  };
+}
+
+test('sampleLoop : round-robin des profils (X-Super-Properties variés)', async () => {
+  const sps = [];
+  const fetchImpl = async (url, opts) => {
+    sps.push(opts.headers['X-Super-Properties']);
+    return rawResponse({ fingerprint: 'fp-' + sps.length, assignments: ASSIGNMENTS });
+  };
+  const r = await sampler.sampleLoop({ ...BASE_OPTS, fetchImpl, target: 5, concurrency: 1, fpReuse: false });
+  assert.equal(r.ok, 5);
+  assert.equal(sps.length, 5);
+  assert.equal(new Set(sps).size, 5); // 5 profils distincts en round-robin
+  assert.deepEqual(
+    Object.keys(r.profileOk).sort(),
+    ['android', 'ios', 'web-canary', 'web-ptb', 'web-stable']
+  );
+});
+
+test('sampleLoop : re-test X-Fingerprint — hashes API-locked comptés une seule fois', async () => {
+  const firstPayload = { fingerprint: 'fp-1', assignments: ASSIGNMENTS };
+  const lockedPayload = {
+    fingerprint: 'fp-1',
+    assignments: [...ASSIGNMENTS, [333, 1, 1, null, null, 5000]],
+  };
+  const headersSeen = [];
+  const fetchImpl = async (url, opts) => {
+    headersSeen.push(opts.headers);
+    return rawResponse(opts.headers['X-Fingerprint'] ? lockedPayload : firstPayload);
+  };
+  const r = await sampler.sampleLoop({ ...BASE_OPTS, fetchImpl, target: 2, concurrency: 1 });
+  assert.equal(r.ok, 2);
+  assert.equal(r.followupNew, 2); // 1 hash API-locked révélé × 2 fingerprints
+  const h111 = r.byHash.get(111);
+  assert.equal(h111.total, 4); // pas de double comptage (2 échantillons × 2 entrées)
+  const h333 = r.byHash.get(333);
+  assert.equal(h333.total, 2);
+  assert.equal(h333.buckets.get(1).n, 2);
+  assert.equal(headersSeen[1]['X-Fingerprint'], 'fp-1'); // re-test du même fingerprint
+  assert.ok(headersSeen[0]['X-Super-Properties']); // contexte client dès le 1er appel
 });

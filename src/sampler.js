@@ -25,7 +25,8 @@
  *   SAMPLER_WEBHOOK_URL, SAMPLER_TARGET (1200), SAMPLER_CONCURRENCY (3),
  *   SAMPLER_DELAY_MS (250), SAMPLER_MAX_MS (240000), SAMPLER_WINDOW_RUNS (3),
  *   SAMPLER_MIN_N (500), SAMPLER_MIN_DELTA (2), SAMPLER_LAB (1),
- *   SAMPLER_STATE, SAMPLER_NAMES_URL, SAMPLER_UA
+ *   SAMPLER_STATE, SAMPLER_NAMES_URL, SAMPLER_UA, SAMPLER_PROFILES,
+ *   SAMPLER_BUILD (451408), SAMPLER_FP_REUSE (1)
  */
 
 const fs = require('fs');
@@ -59,6 +60,100 @@ const ENDPOINTS = [
   process.env.SAMPLER_ENDPOINT_STABLE || 'https://discord.com/api/v10/experiments',
 ].filter(Boolean);
 
+// ---- Profils client (élargir la population d'expériences user visible) ----
+// Discord filtre les user experiments par contexte client (plateforme, canal
+// de release, build), pas seulement par fingerprint : un invité web « nu »
+// n'expose qu'une poignée d'expériences. En variant X-Super-Properties on
+// sonde plusieurs populations ; un profil non éligible pour une expérience ne
+// renvoie AUCUNE observation pour son hash, donc le pooling par hash reste
+// sans biais (on n'observe que les populations où l'expérience est visible).
+const BUILD = String(process.env.SAMPLER_BUILD || '451408');
+const FP_REUSE = String(process.env.SAMPLER_FP_REUSE ?? '1') === '1';
+
+function b64sp(o) {
+  return Buffer.from(JSON.stringify(o)).toString('base64');
+}
+
+function webSp(channel) {
+  return b64sp({
+    os: 'Windows',
+    browser: 'Chrome',
+    device: '',
+    system_locale: 'fr-FR',
+    has_client_mods: false,
+    browser_user_agent: UA,
+    browser_version: '131.0.0.0',
+    os_version: '10',
+    referrer: '',
+    referrer_current: '',
+    referring_domain_current: '',
+    release_channel: channel,
+    client_build_number: Number(BUILD),
+    client_event_source: null,
+  });
+}
+
+const ALL_PROFILES = [
+  { name: 'web-stable', sp: webSp('stable') },
+  { name: 'web-canary', sp: webSp('canary') },
+  { name: 'web-ptb', sp: webSp('ptb') },
+  {
+    name: 'android',
+    sp: b64sp({
+      os: 'Android',
+      browser: 'Chrome',
+      device: 'Pixel 8',
+      system_locale: 'fr-FR',
+      has_client_mods: false,
+      browser_user_agent:
+        'Mozilla/5.0 (Linux; Android 15; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36',
+      browser_version: '131.0.0.0',
+      os_version: '15',
+      referrer: '',
+      referrer_current: '',
+      referring_domain_current: '',
+      release_channel: 'googlePlay',
+      client_build_number: 251009,
+      client_event_source: null,
+    }),
+  },
+  {
+    name: 'ios',
+    sp: b64sp({
+      os: 'iOS',
+      browser: 'Safari',
+      device: 'iPhone15,3',
+      system_locale: 'fr-FR',
+      has_client_mods: false,
+      browser_user_agent:
+        'Mozilla/5.0 (iPhone; CPU iPhone OS 18_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 Safari/604.1',
+      browser_version: '18.2',
+      os_version: '18.2',
+      referrer: '',
+      referrer_current: '',
+      referring_domain_current: '',
+      release_channel: 'appleAppStore',
+      client_build_number: 251009,
+      client_event_source: null,
+    }),
+  },
+];
+
+function loadProfiles() {
+  const raw = process.env.SAMPLER_PROFILES;
+  if (!raw) return ALL_PROFILES;
+  try {
+    const names = JSON.parse(raw);
+    const sel = ALL_PROFILES.filter((p) => names.includes(p.name));
+    return sel.length ? sel : ALL_PROFILES;
+  } catch (e) {
+    console.warn('SAMPLER_PROFILES illisible — tous les profils seront utilisés');
+    return ALL_PROFILES;
+  }
+}
+
+const PROFILES = loadProfiles();
+
 function clampInt(v, dflt, min, max) {
   const n = Math.round(Number(v));
   if (!Number.isFinite(n)) return dflt;
@@ -83,10 +178,15 @@ async function sampleLoop(opts) {
     delayMs = DELAY_MS,
     maxMs = MAX_MS,
     endpoints = ENDPOINTS,
+    profiles = PROFILES,
+    fpReuse = FP_REUSE,
     timeoutMs = 15000,
     log = () => {},
   } = opts;
 
+  const profileOk = {};
+  let followupNew = 0;
+  let followupFail = 0;
   const rl = { blockUntil: 0, consecutive429: 0, dynamicDelayMs: delayMs };
   const byHash = new Map();
   let ok = 0;
@@ -115,7 +215,7 @@ async function sampleLoop(opts) {
     }
   }
 
-  async function oneSample() {
+  async function oneSample(profile, fingerprint) {
     const waitMs = Math.max(0, rl.blockUntil - now());
     if (waitMs > 0) await sleepImpl(waitMs);
     await sleepImpl(rl.dynamicDelayMs + Math.floor(Math.random() * 150));
@@ -130,6 +230,8 @@ async function sampleLoop(opts) {
             Accept: '*/*',
             'Cache-Control': 'no-cache',
             'X-Request-Id': ridImpl(),
+            ...(profile && profile.sp ? { 'X-Super-Properties': profile.sp } : {}),
+            ...(fingerprint ? { 'X-Fingerprint': fingerprint } : {}),
           },
           timeout: timeoutMs,
         });
@@ -162,7 +264,7 @@ async function sampleLoop(opts) {
           continue;
         }
         rl.consecutive429 = 0;
-        return data.assignments;
+        return { assignments: data.assignments, fingerprint: data.fingerprint || null };
       } catch (e) {
         lastErr = e;
       }
@@ -180,10 +282,31 @@ async function sampleLoop(opts) {
         stopReason = 'budget';
         return;
       }
+      const profile = profiles.length ? profiles[my % profiles.length] : null;
       try {
-        const assignments = await oneSample();
-        addAssignments(assignments);
+        const first = await oneSample(profile);
+        addAssignments(first.assignments);
         ok++;
+        if (profile) profileOk[profile.name] = (profileOk[profile.name] || 0) + 1;
+        // Re-test du même fingerprint : X-Fingerprint donne accès aux
+        // portions « API-locked » des expériences (doc discord-userdoccers).
+        // Seuls les hashes ABSENTS de la 1re réponse sont comptés → pas de
+        // double comptage d'observation.
+        if (fpReuse && first.fingerprint && now() < deadline - 5000) {
+          const seen = new Set((first.assignments || []).map((a) => String(a[0])));
+          try {
+            const second = await oneSample(profile, first.fingerprint);
+            for (const a of second.assignments || []) {
+              if (!Array.isArray(a) || a.length < 3) continue;
+              if (seen.has(String(a[0]))) continue;
+              seen.add(String(a[0]));
+              addAssignments([a]);
+              followupNew++;
+            }
+          } catch (e) {
+            followupFail++;
+          }
+        }
         if (ok % 200 === 0) {
           log('  échantillons ok=' + ok + '/' + target + ' fail=' + fail + ' delay=' + rl.dynamicDelayMs + 'ms hashes=' + byHash.size);
         }
@@ -203,7 +326,7 @@ async function sampleLoop(opts) {
   }
 
   await Promise.all(Array.from({ length: concurrency }, () => worker()));
-  return { byHash, ok, fail, stopReason };
+  return { byHash, ok, fail, stopReason, profileOk, followupNew, followupFail };
 }
 
 // ---- Noms d'expériences (optionnels) ----
@@ -288,6 +411,7 @@ function labReportEmbed(s) {
     '**Système de % par échantillonnage** — run terminé',
     '• Fingerprints sondés : **' + s.ok + '** (' + s.fail + ' échecs, ' + s.elapsed + 's' + (s.stopReason ? ' · arrêt ' + s.stopReason : '') + ')',
     '• Expériences suivies : **' + s.hashes + '** · mesurées : **' + s.measured + '**',
+    '• Profils client : **' + (s.profiles || '-') + '** · API-locked (X-Fingerprint) : **+' + (s.followupNew || 0) + '** obs.',
     '• Changements détectés : **' + s.changes + '**' + (s.isFirst ? ' (seed initial — pas de notif de changement)' : ''),
     '• Guild experiments (exact) : **' +
       (s.guild ? s.guild.count : 'indisponibles') +
@@ -340,13 +464,23 @@ async function main(opts = {}) {
   const isFirst = !(state.experiments && Object.keys(state.experiments).length);
 
   const t0 = Date.now();
-  const { byHash, ok, fail, stopReason } = await sampleLoop({
+  const { byHash, ok, fail, stopReason, profileOk, followupNew, followupFail } = await sampleLoop({
     fetchImpl,
     log: (m) => console.log(m),
   });
   const elapsed = Math.round((Date.now() - t0) / 1000);
   console.log(
     'Échantillonnage:', ok, 'ok,', fail, 'échecs,', elapsed + 's,', byHash.size, 'hashes' + (stopReason ? ' · arrêt: ' + stopReason : '')
+  );
+  console.log(
+    'Profils client:',
+    Object.entries(profileOk || {})
+      .map(([k, v]) => k + '=' + v)
+      .join(' ') || 'aucun'
+  );
+  console.log(
+    'X-Fingerprint (API-locked): +' + (followupNew || 0) + ' observations' +
+      (followupFail ? ' (' + followupFail + ' échecs)' : '')
   );
 
   // ---- Guild experiments : % exacts lus dans le wire Discord ----
@@ -421,7 +555,18 @@ async function main(opts = {}) {
       if (st.missed > REMOVED_AFTER) delete state.experiments[key];
     }
   }
-  state.runs = [...(state.runs || []), { ts: nowIso(), ok, fail, hashes: byHash.size, stopReason: stopReason || null }].slice(-40);
+  state.runs = [
+    ...(state.runs || []),
+    {
+      ts: nowIso(),
+      ok,
+      fail,
+      hashes: byHash.size,
+      stopReason: stopReason || null,
+      profiles: profileOk || {},
+      followupNew: followupNew || 0,
+    },
+  ].slice(-40);
 
   // Estimations + diff (premier run = seed silencieux, pas de flood)
   const changes = [];
@@ -474,6 +619,10 @@ async function main(opts = {}) {
         elapsed,
         stopReason,
         isFirst,
+        profiles: Object.entries(profileOk || {})
+          .map(([k, v]) => k + ' ' + v)
+          .join(' · '),
+        followupNew: followupNew || 0,
         experiments: measuredExperiments,
         guild: guildInfo,
         guildChanges: guildIsFirst ? 0 : guildChanges.length,

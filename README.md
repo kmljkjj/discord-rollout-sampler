@@ -25,10 +25,21 @@ Le sampler lit aussi les **rollouts guild** (expériences de serveurs) : `GET /e
 
 Deux catégories cohabitent :
 
-- **user** : estimation par échantillonnage de fingerprints (invités anonymes — ~5 expériences visibles, celles que Discord assigne sans compte) ;
+- **user** : estimation par échantillonnage de fingerprints (invités anonymes — ~5 expériences visibles avec un seul profil web ; les profils client ci-dessous élargissent la population) ;
 - **guild** : % exacts lus dans le wire, deltas ≥ `SAMPLER_MIN_DELTA` annoncés. Anonymement, Discord n\u2019expose qu\u2019un petit sous-ensemble (~5) ; avec le secret `SAMPLER_TOKEN`, quelques expériences du contexte du compte s'ajoutent (vérifié : 5 → 6) — mais Discord ne publie **pas** la liste complète (~500) sur cette API, même authentifié. Les ~500 visibles ailleurs viennent de sources communautaires (gist/worker), hors périmètre de ce dépôt.
 
 Les % guild sont par nature identiques pour tout lecteur de cette API : c'est une donnée publiée par Discord elle-même, pas une copie de qui que ce soit.
+
+## Profils client & X-Fingerprint (user)
+
+Recherche vérifiée (doc discord-userdoccers + dépôt principal) : pour les **user experiments**, l'API `/experiments` ne renvoie que le **bucket assigné** (hash, bucket, population…) — jamais les ranges de rollout. Il n'existe donc **pas de % exact user dans l'API Discord** ; les ~500 % affichés par les trackers communautaires viennent du gist/worker, pas de l'API. La seule voie 100 % API = l'estimation par échantillonnage.
+
+Ce que l'API montre dépend aussi du **contexte client** : Discord filtre les expériences par plateforme, canal de release et build. Un invité web « nu » n'expose que ~5 expériences. Le sampler élargit donc la population sondée, toujours sans biais :
+
+- **Multi-profils `X-Super-Properties`** : web stable / canary / ptb + Android + iOS, en round-robin (la cible est répartie entre profils). Un profil non éligible pour une expérience ne renvoie **aucune observation** pour son hash → le pooling par hash reste valide (on n'observe que les populations où l'expérience est visible).
+- **Re-test `X-Fingerprint`** (`SAMPLER_FP_REUSE`, défaut 1) : la doc indique que renvoyer le fingerprint du premier appel permet d'accéder aux portions **API-locked** des expériences. Chaque fingerprint sondé est ré-interrogé une 2e fois ; seuls les hashes absents de la 1re réponse sont comptés — pas de double comptage. Le rapport LAB affiche « API-locked (X-Fingerprint) : +N obs. ».
+
+Env associées : `SAMPLER_PROFILES` (JSON, ex. `["web-canary","android"]` — sous-ensemble des profils), `SAMPLER_BUILD` (client_build_number web, ex. 451408), `SAMPLER_FP_REUSE` (1/0).
 
 ## Setup webhook
 
@@ -65,6 +76,9 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 | SAMPLER_LAB | 1 | rapport de run à chaque passage |
 | SAMPLER_REMOVED_AFTER | 6 | runs d'absence avant purge d'une expérience |
 | SAMPLER_NAMES_URL | (dépôt principal) | liste d'IDs pour nommer les hash |
+| SAMPLER_PROFILES | (tous) | sous-ensemble de profils client (JSON) |
+| SAMPLER_BUILD | 451408 | client_build_number des super-props web |
+| SAMPLER_FP_REUSE | 1 | re-tester chaque fingerprint avec X-Fingerprint |
 
 ## Tests
 
@@ -80,3 +94,5 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 
 - 02:11 → 02:36 : `SAMPLER_TOKEN` ajouté et diagnostiqué en runs réels (l'état archive `auth`, `raw` et chaque tentative host/version/statut). Verdict : le secret arrive bien (200 auth) ; v10 renvoie 5 guild experiments même authentifié, v9 en renvoie 6 — dont `2025-08_default_invite_expiration_guild` (Variant 2 à 95 %), invisible en anonyme. Conclusion vérifiée dans le dépôt principal : ses ~499 % user viennent du gist communautaire (agnonotdev) et du worker `experiments.dscrd.workers.dev` — PAS de l'API Discord seule. Le sampler mesure donc **tout ce que Discord nous montre** : c'est la limite de la mesure 100 % indépendante, pas un bug.
 - 02:44 : support **multi-tokens** (`SAMPLER_TOKEN_2..5`) — chaque token interroge la chaîne v9, fusion des réponses par hash (union des ranges par bucket, % recalculés), le LAB affiche `token ×N`. Un seul token = contexte d'un seul compte ; les autres tokens élargissent la collecte.
+
+- **Profils client + X-Fingerprint** : le sampling teste désormais 5 contextes client (web stable/canary/ptb, Android, iOS) en round-robin via `X-Super-Properties`, et ré-interroge chaque fingerprint (`X-Fingerprint`) pour révéler les hashes API-locked — objectif : dépasser les ~5 user experiments visibles avec un profil web seul.

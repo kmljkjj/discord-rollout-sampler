@@ -57,6 +57,19 @@ Le sampler implémente la même reconstruction, intégrée au pipeline :
 - le LAB affiche les ranges reconstruits : « Variant 1 6% [9510-9999] » — la résolution s'affine à mesure que la fenêtre cumule des échantillons (~500/run → ~6 000 sur la fenêtre de 12 runs ; les trackers font ~100 000 par mise à jour) ;
 - le % Wilson reste la valeur publiée de référence (non biaisée même si des trous subsistent) ; `segPct` sert de contre-vérification croisée.
 
+## Nommage des hash - pourquoi certains restent anonymes
+
+L'API `/experiments` ne renvoie **que le hash** : `hash = murmur3(experiment_id)` (seed 0). Le nom n'est jamais transmis ; pour l'afficher, le sampler calcule le murmur3 de chaque id connu (`data/known_experiment_ids.json`, ids scrapés du build public du client par le dépôt principal) et matche les hash. C'est le mécanisme inverse du dépôt principal, et celui de tous les trackers.
+
+**Diagnostic du 2026-10-25** : sur les 7 expériences suivies, 2 sont nommées ; les 5 autres n'apparaissent dans **aucune** liste publique de noms - vérifié en diagnostic uniquement (aucune donnée consommée par le sampler) :
+
+- gist agnonotdev `rollouts.json` : 53 rollouts actifs, champ `hash` = murmur3(id) (vérifié sur échantillon) - aucun des 5 ;
+- Wumpus Central `discrapper-canary` : `data/experiments.json` (28 noms) + `data/apex_experiments.json` (102 noms) - aucun des 5 ;
+- API advaith (guild, nommée) - aucun des 5 ;
+- notre propre scrape du build canary 650180 (547 ids) - aucun des 5.
+
+Conclusion : ces expériences n'ont **pas de code client** dans le build public (serveur seul, ou id jamais embarquée dans le JS). Personne ne peut les nommer - les trackers ont exactement la même limite, leur nommage vient aussi du scrape du client. `hash:NNNN` est donc l'affichage honnête ; le nom apparaîtra si Discord livre un jour le code correspondant (rafraîchissement de `known_experiment_ids.json` depuis le dépôt principal).
+
 ## Setup webhook
 
 1. Créer un webhook Discord.
@@ -115,3 +128,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - 03:01 → **run de validation** (#17) : 5 → **7 expériences suivies**. Deux nouvelles découvertes (`hash:2582794089`, `hash:3948141150`, absentes de la liste des noms connus) ne sont visibles **que sur les profils web** : 123 observations = web-stable 42 + web-canary 41 + web-ptb 40, **zéro** sur Android/iOS — preuve directe du filtrage par contexte client. Re-test X-Fingerprint : **+23 observations API-locked**. Trade-off : 204 fingerprints/run (vs ~496 avant) car 2 requêtes par fingerprint → arrêt propre sur budget (`SAMPLER_MAX_MS`) ; désactivable via `SAMPLER_FP_REUSE`.
 
 - **Reconstruction de ranges** (méthode des trackers, vérifiée) : le sampler collecte désormais les positions `hash_result` par bucket et reconstruit les ranges en segments cumulés sur la fenêtre — les % user « exacts » des trackers sont eux-mêmes estimés ainsi depuis l'API publique, rien ne nous est inaccessible.
+- **Nommage** (2026-10-25) : pourquoi des `hash:NNNN` ? L'API ne renvoie que le hash (= murmur3 du nom) ; les 5 hash non nommés du run courant n'existent dans aucune liste publique (gist, Wumpus, advaith, notre scrape 547 ids) - expériences sans code client, non nommables par quiconque, trackers inclus. Cf. section "Nommage des hash".

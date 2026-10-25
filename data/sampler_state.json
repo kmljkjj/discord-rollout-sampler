@@ -56,6 +56,13 @@
       "fail": 4,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-25T02:19:04.157Z",
+      "ok": 402,
+      "fail": 8,
+      "hashes": 5,
+      "stopReason": "budget"
     }
   ],
   "experiments": {
@@ -138,6 +145,16 @@
               "n": 19,
               "posMin": 9511,
               "posMax": 9996
+            }
+          }
+        },
+        {
+          "total": 27,
+          "buckets": {
+            "1": {
+              "n": 27,
+              "posMin": 9526,
+              "posMax": 9909
             }
           }
         }
@@ -226,6 +243,16 @@
               "posMax": 433
             }
           }
+        },
+        {
+          "total": 18,
+          "buckets": {
+            "1": {
+              "n": 18,
+              "posMin": 28,
+              "posMax": 492
+            }
+          }
         }
       ],
       "announced": {},
@@ -310,6 +337,16 @@
               "n": 496,
               "posMin": 14,
               "posMax": 9992
+            }
+          }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 37,
+              "posMax": 9982
             }
           }
         }
@@ -400,6 +437,16 @@
               "posMax": 9992
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "11": {
+              "n": 402,
+              "posMin": 17,
+              "posMax": 9941
+            }
+          }
         }
       ],
       "announced": {
@@ -488,6 +535,16 @@
               "posMax": 9991
             }
           }
+        },
+        {
+          "total": 402,
+          "buckets": {
+            "1": {
+              "n": 402,
+              "posMin": 5,
+              "posMax": 9989
+            }
+          }
         }
       ],
       "announced": {
@@ -497,9 +554,9 @@
     }
   },
   "lastChanges": [],
-  "scrapedAt": "2026-10-25T00:43:55.791Z",
+  "scrapedAt": "2026-10-25T02:19:04.434Z",
   "guild": {
-    "ts": "2026-10-25T00:43:55.584Z",
+    "ts": "2026-10-25T02:19:04.156Z",
     "source": "canary",
     "count": 5,
     "experiments": [

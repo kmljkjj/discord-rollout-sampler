@@ -84,6 +84,13 @@
       "fail": 4,
       "hashes": 5,
       "stopReason": null
+    },
+    {
+      "ts": "2026-10-25T02:50:24.107Z",
+      "ok": 496,
+      "fail": 4,
+      "hashes": 5,
+      "stopReason": null
     }
   ],
   "experiments": {
@@ -206,6 +213,16 @@
               "n": 26,
               "posMin": 9521,
               "posMax": 9999
+            }
+          }
+        },
+        {
+          "total": 16,
+          "buckets": {
+            "1": {
+              "n": 16,
+              "posMin": 9526,
+              "posMax": 9955
             }
           }
         }
@@ -336,6 +353,16 @@
               "posMax": 497
             }
           }
+        },
+        {
+          "total": 26,
+          "buckets": {
+            "1": {
+              "n": 26,
+              "posMin": 24,
+              "posMax": 468
+            }
+          }
         }
       ],
       "announced": {
@@ -462,6 +489,16 @@
               "n": 496,
               "posMin": 20,
               "posMax": 9954
+            }
+          }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 48,
+              "posMax": 9973
             }
           }
         }
@@ -592,6 +629,16 @@
               "posMax": 9997
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "11": {
+              "n": 496,
+              "posMin": 11,
+              "posMax": 9986
+            }
+          }
         }
       ],
       "announced": {
@@ -720,6 +767,16 @@
               "posMax": 9892
             }
           }
+        },
+        {
+          "total": 496,
+          "buckets": {
+            "1": {
+              "n": 496,
+              "posMin": 45,
+              "posMax": 9996
+            }
+          }
         }
       ],
       "announced": {
@@ -728,25 +785,10 @@
       "missed": 0
     }
   },
-  "lastChanges": [
-    {
-      "name": "hash:1144304849",
-      "kind": "new",
-      "deltas": [
-        {
-          "bucket": 1,
-          "label": "Variant 1",
-          "from": 0,
-          "to": 100,
-          "delta": 100,
-          "ciPct": 0.7
-        }
-      ]
-    }
-  ],
-  "scrapedAt": "2026-10-25T02:44:33.656Z",
+  "lastChanges": [],
+  "scrapedAt": "2026-10-25T02:50:24.262Z",
   "guild": {
-    "ts": "2026-10-25T02:44:33.514Z",
+    "ts": "2026-10-25T02:50:24.107Z",
     "source": "stable",
     "auth": "token",
     "attempts": [
@@ -754,7 +796,8 @@
         "host": "stable",
         "v": "9",
         "status": 200,
-        "auth": true
+        "auth": true,
+        "token": 1
       }
     ],
     "raw": 6,

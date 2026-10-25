@@ -18,7 +18,7 @@
 const SCALE = 10000;
 // Token utilisateur optionnel : sans lui, Discord n expose qu un petit sous-ensemble
 // des guild experiments aux invités anonymes. Avec, la liste complète est lue.
-const TOKEN = process.env.SAMPLER_TOKEN || null;
+const TOKEN = (process.env.SAMPLER_TOKEN || '').trim() || null;
 const UA =
   process.env.SAMPLER_UA ||
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
@@ -128,30 +128,55 @@ function decodeGuildWire(tuple, nameFor) {
 /**
  * Récupère les guild experiments (exact). Essaie chaque endpoint dans l'ordre ;
  * retourne null si aucun ne répond avec des données exploitables.
+ *
+ * Diagnostic token (sans jamais divulguer sa valeur) : la réponse transporte
+ * tokenEnv (secret présent dans l'env), authSent (en-tête Authorization envoyé),
+ * rawCount (entrées brutes du wire) et attempts (statut HTTP par endpoint).
+ * Si un token présent est refusé partout (401...), on retente la chaîne en
+ * anonyme pour ne pas perdre le suivi des % exacts.
  */
 async function fetchGuildExperiments(fetchImpl, nameFor) {
-  for (const url of GUILD_ENDPOINTS) {
-    try {
-      const res = await fetchImpl(url, {
-        headers: {
-          'User-Agent': UA,
-          Accept: '*/*',
-          ...(TOKEN ? { Authorization: TOKEN } : {}),
-        },
-        timeout: 25000,
-      });
-      if (!res.ok) continue;
-      const data = await res.json();
-      const raw = (data && Array.isArray(data.guild_experiments) && data.guild_experiments) || [];
-      if (!raw.length) continue;
-      const list = raw.map((t) => decodeGuildWire(t, nameFor)).filter((e) => e && e.treatments.length);
-      if (!list.length) continue;
-      return { list, source: url.includes('canary') ? 'canary' : 'stable', status: res.status };
-    } catch (_) {
-      // endpoint suivant
+  const attempts = [];
+  const tryChain = async (withAuth) => {
+    for (const url of GUILD_ENDPOINTS) {
+      const host = url.includes('canary') ? 'canary' : 'stable';
+      const authed = !!(withAuth && TOKEN);
+      try {
+        const headers = { 'User-Agent': UA, Accept: '*/*' };
+        if (authed) {
+          headers.Authorization = TOKEN;
+          headers['X-Discord-Locale'] = 'en-US';
+        }
+        const res = await fetchImpl(url, { headers, timeout: 25000 });
+        attempts.push({ host, status: res.status, auth: authed });
+        if (!res.ok) continue;
+        const data = await res.json();
+        const raw = (data && Array.isArray(data.guild_experiments) && data.guild_experiments) || [];
+        if (!raw.length) continue;
+        const list = raw.map((t) => decodeGuildWire(t, nameFor)).filter((e) => e && e.treatments.length);
+        if (!list.length) continue;
+        return {
+          list,
+          source: host === 'canary' ? 'canary' : 'stable',
+          status: res.status,
+          rawCount: raw.length,
+          authSent: authed,
+          tokenEnv: !!TOKEN,
+        };
+      } catch (_) {
+        attempts.push({ host, status: 0, auth: authed });
+      }
     }
+    return null;
+  };
+  let out = await tryChain(true);
+  if (!out && TOKEN) {
+    console.warn('SAMPLER_TOKEN refusé par tous les endpoints — nouvelle tentative anonyme');
+    out = await tryChain(false);
   }
-  return null;
+  if (!out) return null;
+  out.attempts = attempts;
+  return out;
 }
 
 /** Changements de % guild vs snapshot précédent (deltas >= minDelta points).

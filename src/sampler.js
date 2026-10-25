@@ -293,6 +293,7 @@ function labReportEmbed(s) {
       (s.guild ? s.guild.count : 'indisponibles') +
       '**' +
       (s.guild && s.guild.source ? ' · ' + s.guild.source : '') +
+      (s.guild && s.guild.auth ? ' · ' + s.guild.auth : '') +
       (s.guild && s.guildChanges != null ? ' · Δ: ' + s.guildChanges : ''),
     '• Source : **API Discord uniquement** — aucune donnée communautaire',
   ];
@@ -366,9 +367,16 @@ async function main(opts = {}) {
         : null;
     } else {
       if (!guildIsFirst) guildChanges = guild.diffGuildExperiments(guildPrev, guildRes.list, MIN_DELTA);
+      const guildAuth = !guildRes.tokenEnv
+        ? 'anonyme'
+        : guildRes.authSent
+          ? 'token'
+          : 'token refusé (fallback anonyme)';
       state.guild = {
         ts: nowIso(),
         source: guildRes.source,
+        auth: guildAuth,
+        raw: guildRes.rawCount,
         count: guildRes.list.length,
         experiments: guildRes.list.map((e) => ({
           id: e.id,
@@ -376,7 +384,7 @@ async function main(opts = {}) {
           treatments: e.treatments.map((t) => ({ bucket: t.bucket, pct: t.pct })),
         })),
       };
-      guildInfo = { count: guildRes.list.length, source: guildRes.source };
+      guildInfo = { count: guildRes.list.length, source: guildRes.source, auth: guildAuth };
     }
   } else if (guildPrev.length) {
     console.warn('Guild experiments indisponibles — état précédent conservé');
@@ -387,6 +395,7 @@ async function main(opts = {}) {
   console.log(
     'Guild experiments:',
     guildInfo ? guildInfo.count + ' (' + guildInfo.source + ')' : 'INDISPONIBLES',
+    guildInfo && guildInfo.auth ? '· auth: ' + guildInfo.auth : '',
     '· changements:',
     guildChanges.length,
     guildIsFirst ? '(seed)' : ''

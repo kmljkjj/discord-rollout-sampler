@@ -78,4 +78,4 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - Extension **guild experiments** — % exacts lus dans le wire Discord (`src/guild.js`), en plus des % user estimés par échantillonnage.
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.
 
-- 00:12 : secret `SAMPLER_TOKEN` activé — run déclenché pour valider la lecture de la liste guild complète (~500 attendues) avec % exacts.
+- 02:11 : secret `SAMPLER_TOKEN` déclaré ajouté, mais le run de validation (02:19) ne montre toujours que 5 guild experiments — le token n'est pas arrivé jusqu'au run. Diagnostic ajouté : l'état (`state.guild.auth`, `state.guild.raw`) et le rapport LAB indiquent `anonyme` / `token` / `token refusé (fallback anonyme)` ; si un token présent est refusé (401…), le sampler retombe automatiquement en anonyme.

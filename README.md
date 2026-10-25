@@ -77,3 +77,5 @@ Le workflow `sampler.yml` utilise des valeurs ajustées après les premiers runs
 - 23h00 : premier run **cron** (déclenché en retard par GitHub, comme souvent sur un workflow récent) — rapport LAB reçu. Constat : le push d'état était rejeté quand `main` bougeait pendant un run (checkout figé au SHA du push déclencheur, pas de rebase) → correctif : checkout `ref: main` + `pull --rebase` avec retry.
 - Extension **guild experiments** — % exacts lus dans le wire Discord (`src/guild.js`), en plus des % user estimés par échantillonnage.
 - `data/sampler_state.json` committé automatiquement par le workflow après chaque run.
+
+- 00:12 : secret `SAMPLER_TOKEN` activé — run déclenché pour valider la lecture de la liste guild complète (~500 attendues) avec % exacts.
